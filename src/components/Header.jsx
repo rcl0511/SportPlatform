@@ -15,8 +15,8 @@ const Header = () => {
   return (
     <div
       style={{
-        height: 90,
-        width: 'calc(100% - 90px)', // 사이드바 너비 제외
+        height: 70,
+        width: 'calc(100% - 50px)', // 사이드바 너비 제외
         background: '#F6FAFD',
         borderBottom: '1px solid #EAEEF4',
         display: 'flex',

@@ -188,7 +188,7 @@ const Edit3 = () => {
           onChange={(e) => setReportContent(e.target.value)}
           placeholder="내용을 입력하세요"
           style={{
-            width: '100%',
+            width: '90%',
             height: '300px',
             padding: '0',
             fontSize: '16px',
@@ -263,8 +263,8 @@ const Edit3 = () => {
         onClick={toggleSidebar}
         style={{
           position: 'absolute',
-          top: 0,
-          left: `calc(100% - ${sidebarWidth + 40}px)`,
+          top: 30,
+          left: `calc(100% - ${sidebarWidth + 42}px)`,
           width: 28,
           height: 80,
           background: '#D0E6F8',

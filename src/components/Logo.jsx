@@ -13,12 +13,12 @@ const Logo = () => {
     }}>
       <span style={{
         fontWeight: 700,
-        fontSize: 22,
+        fontSize: 70,
         letterSpacing: 0,
         color: '#305078',
         fontFamily: "'Roboto', 'Pretendard', 'Roboto', 'Noto Sans KR', Arial, sans-serif"
       }}>
-        SPORT NEWS
+        ■
       </span>
     </div>
   );
