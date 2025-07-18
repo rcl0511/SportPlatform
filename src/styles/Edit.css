@@ -192,8 +192,10 @@
    File: src/styles/Global.css
    ========================================== */
 
-/* Container */
 .edit-container {
+  /* 상단 여백을 40px로 늘리기 */
+  margin-top: 60px;
+  /* 나머지 속성은 그대로 */
   position: relative;
   width: 100%;
   max-width: 900px;

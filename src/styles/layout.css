@@ -61,7 +61,7 @@
 
 /* 페이지 본문 */
 .page-content {
-  margin-top: 100px; /* 헤더 높이만큼 밀어줌 */
+  margin-top: 10px; /* 헤더 높이만큼 밀어줌 */
   flex: 1;
   overflow-y: auto;
   padding: 24px;

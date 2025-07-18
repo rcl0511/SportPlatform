@@ -23,45 +23,52 @@ const Edit = () => {
     }
   };
 
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    setFileName(file.name);
-    setUploadedFile(file);
-    setPreviewSrc(null);
-    setPreviewCsv([]);
 
-    const reader = new FileReader();
-    if (file.type.startsWith('image/')) {
-      reader.onload = () => {
-        const result = reader.result;
-        localStorage.setItem('edit_file', result);
-        localStorage.setItem('edit_fileName', file.name);
-        setPreviewSrc(result);
-      };
-      reader.readAsDataURL(file);
-    } else if (/\.csv$/i.test(file.name)) {
-      reader.onload = () => {
-        const text = reader.result;
-        localStorage.setItem('edit_file', text);
-        localStorage.setItem('edit_fileName', file.name);
-        // Split on CRLF or LF
-        const rows = text.trim().split(/\r?\n/).map(row => row.split(','));
-        setPreviewCsv(rows);
-      };
-      reader.readAsText(file);
-    } else {
-      // Unsupported file type: no preview
-      reader.onload = () => {
-        const text = reader.result;
-        localStorage.setItem('edit_file', text);
-        localStorage.setItem('edit_fileName', file.name);
-        setPreviewSrc(null);
-      };
-      reader.readAsText(file);
-    }
-  };
 
+   const handleFileChange = (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  // 파일 정보 상태 업데이트
+  setFileName(file.name);
+  setUploadedFile(file);
+  setPreviewSrc(null);
+  setPreviewCsv([]);
+
+  const reader = new FileReader();
+
+  if (file.type.startsWith('image/')) {
+    // 이미지 파일: DataURL로 읽어서 저장 및 미리보기
+    reader.onload = () => {
+      const result = reader.result;
+      localStorage.setItem('edit_file', result);
+      localStorage.setItem('edit_fileName', file.name);
+      setPreviewSrc(result);
+    };
+    reader.readAsDataURL(file);
+
+  } else if (/\.csv$/i.test(file.name)) {
+    // CSV 파일: 텍스트로 읽어서 파싱 후 저장 및 미리보기
+    reader.onload = () => {
+      const text = reader.result;
+      localStorage.setItem('edit_file', text);
+      localStorage.setItem('edit_fileName', file.name);
+      const rows = text.trim().split(/\r?\n/).map(row => row.split(','));
+      setPreviewCsv(rows);
+    };
+    reader.readAsText(file);
+
+  } else {
+    // 그 외 파일: 텍스트로만 저장 (미리보기 없음)
+    reader.onload = () => {
+      const text = reader.result;
+      localStorage.setItem('edit_file', text);
+      localStorage.setItem('edit_fileName', file.name);
+      setPreviewSrc(null);
+    };
+    reader.readAsText(file);
+  }
+};
   const handleRemoveTag = (tagToRemove) => {
     setTags(tags.filter((tag) => tag !== tagToRemove));
   };

@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
-import '../styles/Dashboard.css'; // 스타일 분리
+import '../styles/Dashboard.css';
 import Rightbar from '../components/Rightbar';
 
 const Dashboard = () => {
   // state 정의
   const [reports, setReports] = useState([]);
-  const [scheduledReports, setScheduledReports] = useState([]);
+
   const [recentGames, setRecentGames] = useState([]);
   const [selectedDate, setSelectedDate] = useState(null);
 
@@ -36,22 +36,6 @@ const Dashboard = () => {
     const storedReports = JSON.parse(localStorage.getItem('saved_files')) || [];
     setReports(storedReports);
 
-    // 2) 예정된 경기 예시
-    const matchSchedule = [
-      {
-        home: '한화 이글스',
-        away: '롯데 자이언츠',
-        due: '2025-05-25',
-        date: '2025-05-25',
-      },
-      {
-        home: 'LG 트윈스',
-        away: '키움 히어로즈',
-        due: '2025-05-26',
-        date: '2025-05-26',
-      },
-    ];
-    setScheduledReports(matchSchedule);
 
     // 3) 최근 경기 결과 예시 (크롤링한 데이터를 여기에 넣으세요)
     const storedGames =
@@ -81,29 +65,26 @@ const Dashboard = () => {
     setRecentGames(storedGames);
   }, []);
 
-  // 캘린더에 표시할 모든 일정 (기사 + 예정 경기)
-  const allReports = [
-    ...reports.map((r) => ({ ...r, date: r.date })), // 기사도 date 프로퍼티가 있다고 가정
-    ...scheduledReports.map((r) => ({ ...r, date: r.date })),
-  ];
-
-  // 캘린더 각 날짜 타일에 일정 표시
+   // 달력에 표시할 기사만
   const tileContent = ({ date, view }) => {
     if (view !== 'month') return null;
     const dateStr = date.toISOString().slice(0, 10);
-    const matches = allReports.filter((r) => r.date === dateStr);
-
     return (
       <div className="calendar-tile-content">
-        {matches.map((m, i) => (
-          <div key={i} className="calendar-match">
-            <span>{m.home} vs {m.away}</span>
-          </div>
-        ))}
+        {reports
+          .filter(r => r.date === dateStr)
+          .map((a, i) => (
+            <div key={i} className="calendar-article">
+              📰 {a.title}
+            </div>
+          ))
+        }
       </div>
     );
   };
 
+  // 캘린더 각 날짜 타일에 일정 표시
+  
   return (
     <div className="dashboard-container">
       <div className="dashboard-main">

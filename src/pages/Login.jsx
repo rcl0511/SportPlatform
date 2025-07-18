@@ -11,7 +11,7 @@ const Login = () => {
 
   useEffect(() => {
     if (window.Kakao && !window.Kakao.isInitialized()) {
-      window.Kakao.init('네이티브 앱 키 입력'); // 🔥 본인 키로 대체
+      window.Kakao.init('ae6f405402a71e2f12dc093ead8907b5');
     }
   }, []);
 
@@ -21,8 +21,13 @@ const Login = () => {
     try {
       const response = await fetch('http://localhost:8000/api/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username,
+          password,
+        }),
       });
       if (!response.ok) throw new Error('Login failed');
 
@@ -49,24 +54,35 @@ const Login = () => {
         console.log('카카오 로그인 성공', authObj);
         window.Kakao.API.request({
           url: '/v2/user/me',
-          success: async (res) => {
+          success: async function (res) {
+            console.log('카카오 사용자 정보', res);
+
+            const kakaoId = res.id?.toString() || '';
+            const nickname = res.kakao_account?.profile?.nickname || '카카오유저';
+            const email = res.kakao_account?.email || `${kakaoId}@kakao.local`;  // 이메일 없으면 가짜 이메일로 대체
+        
             const kakaoUser = {
-              email: res.kakao_account.email || '',
-              nickname: res.kakao_account.profile.nickname || '',
-              kakaoId: res.id.toString(),
+              email,
+              nickname,
+              kakaoId,
             };
+        
             try {
               const serverRes = await fetch('http://localhost:8000/api/kakao-login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(kakaoUser),
               });
+        
               if (!serverRes.ok) throw new Error('서버 로그인 실패');
-
+        
               const data = await serverRes.json();
+              console.log('서버 데이터:', data);
+        
               localStorage.setItem('token', data.access_token);
               localStorage.setItem('user_info', JSON.stringify(data.user));
               localStorage.setItem('isLoggedIn', 'true');
+        
               setUserInfo(data.user);
               setIsLoggedIn(true);
               navigate('/');
@@ -93,9 +109,12 @@ const Login = () => {
       <form onSubmit={(e) => e.preventDefault()} style={formStyle}>
         <h2 style={{ textAlign: 'center', color: '#092C4C' }}>Login</h2>
 
+        
+
+        {/* 아이디 입력 */}
         <input
-          type="text"
-          placeholder="ID"
+          type="username"
+          placeholder="Username"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           required

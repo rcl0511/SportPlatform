@@ -16,28 +16,39 @@ const Edit2 = () => {
     if (storedSubject) setCustomTitle(storedSubject);
 
     const now = new Date();
-    const formatted = now.toLocaleDateString('en-US', {
+    setToday(now.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
-    });
-    setToday(formatted);
+    }));
   }, []);
 
-  const handleHome = () => navigate('/');
+  // “기사 작성 시작” 버튼 핸들러
+  const handleStart = () => {
+    const base64 = localStorage.getItem('edit_file');        // dataURL 또는 CSV 텍스트
+    const fileName = localStorage.getItem('edit_fileName');  // 파일명
+
+    navigate('/edit3', {
+      state: {
+        topic: customTitle,
+        base64,
+        fileName,
+      }
+    });
+  };
 
   return (
     <div className="edit-container">
       {/* Header */}
       <div className="edit-header">
         <h2>스포츠 기사 세부 정보 입력</h2>
-        <div className="edit-close" onClick={handleHome}>×</div>
+        <div className="edit-close" onClick={() => navigate('/')}>×</div>
       </div>
 
       {/* User Info */}
       <div className="edit-userinfo">
         <div className="edit-userinfo-inner">
-          <div className="edit-avatar" />
+          <div className="edit-avatar"/>
           <div>
             <div className="edit-department">{userInfo?.department || '부서없음'}</div>
             <div className="edit-username">{userInfo ? `${userInfo.firstName} ${userInfo.lastName}` : '이름없음'}</div>
@@ -81,10 +92,7 @@ const Edit2 = () => {
 
       {/* Actions */}
       <div className="edit-actions">
-        <button
-          className="btn-primary"
-          onClick={() => navigate('/edit3')}
-        >
+        <button className="btn-primary" onClick={handleStart}>
           기사 작성 시작
         </button>
       </div>
