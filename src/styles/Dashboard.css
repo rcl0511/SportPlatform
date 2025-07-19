@@ -1,5 +1,8 @@
-/* src/styles/Dashboard.css */
+/* ==========================================================================
+   Dashboard Styles
+   ========================================================================== */
 
+/* ── Layout ── */
 .dashboard-container {
   position: relative;
   display: flex;
@@ -12,6 +15,7 @@
   flex: 1;
 }
 
+/* ── Card Containers ── */
 .calendar-card,
 .teams-card,
 .articles-card {
@@ -22,39 +26,15 @@
   margin-bottom: 30px;
 }
 
-.calendar-tile-content {
-  min-height: 28px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
 
-/* 경기 일정 스타일 */
-.calendar-match {
-  font-size: 10px;
-  color: #305078;
-  background: #E8F2FA;
-  border-radius: 4px;
-  padding: 2px 4px;
-  margin-bottom: 2px;
-  text-overflow: ellipsis;
-  overflow: hidden;
-  white-space: nowrap;
-}
 
-/* 작성된 기사 스타일 */
-.calendar-article {
-  font-size: 10px;
-  color: #E26A6A;
-  background: #FFECEC;
-  border-radius: 4px;
-  padding: 2px 4px;
-  margin-bottom: 2px;
-  text-overflow: ellipsis;
-  overflow: hidden;
-  white-space: nowrap;
-}
 
+
+
+
+/* ==========================================================================
+   Teams Grid
+   ========================================================================== */
 .teams-grid {
   display: flex;
   flex-wrap: wrap;
@@ -84,24 +64,27 @@
   height: 72px;
   border-radius: 14px;
   background: #fff;
-  border: 2px solid #eee;
+  border: 2px solid #EEE;
   object-fit: contain;
 }
 
+/* ==========================================================================
+   Sidebar Article List
+   ========================================================================== */
 .article {
   margin-bottom: 16px;
-  border-bottom: 1px solid #EAEEF4;
+  border-bottom: 1px solid #7875FF;
   padding-bottom: 12px;
 }
 
 .article-title {
   font-weight: bold;
-  color: #305078;
+  color: #000000;
 }
 
 .article-summary {
   font-size: 13px;
-  color: #555;
+  color: #000000;
   margin: 4px 0;
 }
 
@@ -110,9 +93,11 @@
   color: #A0AEC0;
 }
 
-/* ────────────────────────────────────────────── */
+/* ==========================================================================
+   Recent Games Card
+   ========================================================================== */
 .games-card {
-  background-color: #ffffff;
+  background-color: #FFFFFF;
   border-radius: 8px;
   padding: 16px;
   margin-top: 24px;
@@ -172,4 +157,31 @@
 
 .game:last-child {
   margin-bottom: 0;
+}
+
+
+.react-calendar__tile.has-article {
+  background-color: #FFFFFF !important;  /* 셀 배경을 완전히 흰색으로 덮습니다 */
+}
+
+/* ── 2) calendar-article 카드 디자인 ── */
+.calendar-article {
+  margin: 8px auto;                       /* 위아래 간격, 가운데 정렬 */
+  width: 85%;                             /* 카드 너비 */
+  background: #3e71ff !important;         /* 파랑 배경 */
+  color: #ffffff !important;              /* 검정 텍스트 */
+  font-size: 15px !important;             /* 원하는 글자 크기 */
+  font-weight: 300;                       
+  padding: 6px 12px !important;           /* 여유 공간 */
+  border-radius: 6px !important;          /* 둥근 모서리 */
+  border: none !important;                /* 불필요한 테두리 제거 */
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1) !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: box-shadow 0.2s;
+}
+
+.calendar-article:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
 }

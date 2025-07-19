@@ -1,0 +1,154 @@
+/* 컨테이너 */
+.editor-container {
+  width: 100%;
+  position: relative;
+  padding: 20px;
+  background: #F6FAFD;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+/* 유저 정보 섹션 */
+.user-info {
+  background: #EEF6FB;
+  padding: 16px;
+  border-radius: 8px;
+  margin-top: 30px;
+  margin-bottom: 24px;
+  position: relative;
+}
+.user-info .row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+.user-info .row:last-child {
+  margin-bottom: 0;
+}
+.user-info .col {
+  font-size: 14px;
+  color: #7E92A2;
+  width: 33%;
+}
+.user-info .col.value {
+  font-size: 16px;
+  font-weight: 600;
+  color: #092C4C;
+}
+
+/* 메인 콘텐츠 */
+.main-content {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.05);
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-height: 50vh;
+  width: calc(100% - 300px); /* JS에서 사이드바 너비에 따라 조정됩니다 */
+}
+
+/* 이미지 컨트롤 */
+.image-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.image-controls label {
+  font-size: 14px;
+}
+.image-controls input[type="range"] { }
+
+/* 이미지 래퍼 */
+.image-wrapper {
+  text-align: center; /* JS에서 alignment에 맞게 override */
+  margin: 16px 0;     /* JS에서 margin-top, margin-left override */
+}
+.image-wrapper img {
+  border-radius: 8px;
+}
+
+/* 제목 및 본문 */
+.report-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #092C4C;
+  margin: 0;
+}
+.report-textarea {
+  width: 100%;
+  padding: 0;
+  font-size: 16px;
+  color: #333;
+  line-height: 1.8;
+  border: none;
+  background: transparent;
+  resize: vertical;
+}
+
+/* 사이드바 */
+.sidebar {
+  position: fixed;
+  top: 70px;
+  right: 0;
+  height: calc(100vh - 90px);
+  background: #EEF6FB;
+  box-shadow: -2px 0 5px rgba(0,0,0,0.1);
+  padding: 20px;
+  overflow-y: auto;
+  transition: width 0.3s ease;
+  z-index: 10;
+}
+
+/* 사이드바 토글 버튼 */
+.sidebar-toggle {
+  position: fixed;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 80px;
+  background: #D0E6F8;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  border-top-left-radius: 8px;
+  border-bottom-left-radius: 8px;
+  z-index: 20;
+}
+
+/* 하단 버튼 그룹 */
+.bottom-buttons {
+  position: fixed;
+  bottom: 20px;
+  display: flex;
+  gap: 12px;
+  z-index: 10;
+}
+
+/* 공통 버튼 스타일 */
+.btn {
+  padding: 10px 16px;
+  border-radius: 8px;
+  background: #514EF3;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* 파일 선택 버튼 */
+.file-button {
+  display: inline-block;
+  padding: 10px 20px;
+  background: #514EF3;
+  color: white;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  margin-top: 20px;
+  margin-bottom: 24px;
+}

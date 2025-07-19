@@ -31,7 +31,7 @@ const Settings = () => {
     <div style={{
       width: '100%',
       maxWidth: '700px',
-      margin: '0px auto',
+      margin: '80px auto',
       padding: '30px',
       background: 'white',
       borderRadius: 12,

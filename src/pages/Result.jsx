@@ -1,12 +1,14 @@
 // src/pages/Result.jsx
+
 import React, { useEffect, useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../contexts/AuthContext';
 import { MdEdit, MdHome, MdShare, MdSave, MdPictureAsPdf } from 'react-icons/md';
 import jsPDF from 'jspdf';
+import '../styles/Result.css';  // CSS import
 
 // 헥스 컬러를 RGB로 변환
-const hexToRgb = (hex) => {
+const hexToRgb = hex => {
   const [r, g, b] = hex.replace('#', '').match(/.{2}/g).map(x => parseInt(x, 16));
   return { r, g, b };
 };
@@ -15,32 +17,16 @@ const Result = () => {
   const navigate = useNavigate();
   const { userInfo, setUserInfo } = useContext(AuthContext);
 
-  // 리포트 내용 & 편집 상태
   const [reportTitle, setReportTitle] = useState('');
   const [reportContent, setReportContent] = useState('');
   const [isEditing, setIsEditing] = useState(false);
-
-  // 헤더 편집용 상태
   const [editableName, setEditableName] = useState('');
   const [editableDept, setEditableDept] = useState('');
   const [editableDate, setEditableDate] = useState('');
-
-  // 콘텐츠 스타일 설정
-  const [contentFontSize] = useState(14);
-  const [contentColor] = useState('#000000');
-  const [isBold] = useState(false);
-  const [isItalic] = useState(false);
-  const [isUnderline] = useState(false);
-  const [contentFontFamily] = useState('Noto Sans KR');
-  const [contentAlign] = useState('left');
-
-  // PDF 설정
-  const [margins]   = useState({ top: 40, left: 40, right: 40 });
-  const [positions] = useState({ headerY: 60, metaYStart: 100, contentYStart: 160 });
   const [fontBase64, setFontBase64] = useState('');
   const [previewUrl, setPreviewUrl] = useState(null);
 
-  // 1) 한글 폰트 Base64 로드
+  // 한글 폰트 로드 (한 번)
   useEffect(() => {
     fetch(`${process.env.PUBLIC_URL}/fonts/NotoSansKR-Regular.ttf.base64.txt`)
       .then(r => r.text())
@@ -48,33 +34,40 @@ const Result = () => {
       .catch(() => console.error('폰트 로드 실패'));
   }, []);
 
-  // 2) 초기 데이터 로드 (제목·내용 + 헤더 정보)
+  // 제목·내용·날짜 초기화 (한 번)
   useEffect(() => {
-    const subj = localStorage.getItem('edit_subject') || '제목 없음';
-    const cont = localStorage.getItem('edit_content') || '내용이 없습니다.';
-    setReportTitle(subj);
-    setReportContent(cont);
+    setReportTitle(localStorage.getItem('edit_subject') || '제목 없음');
+    setReportContent(localStorage.getItem('edit_content') || '내용이 없습니다.');
+    // ISO 포맷으로 날짜 설정 (YYYY-MM-DD)
+    setEditableDate(new Date().toISOString().slice(0, 10));
+  }, []);
 
-    const today = new Date().toLocaleDateString('ko-KR', {
-      year: 'numeric', month: 'short', day: 'numeric'
-    });
-    setEditableDate(today);
-
-    if (userInfo) {
-      setEditableName(`${userInfo.firstName}${userInfo.lastName}`);
-      setEditableDept(userInfo.department || '');
-    }
+  // userInfo 변경 시 작성자·부서 초기화
+  useEffect(() => {
+    if (!userInfo) return;
+    setEditableName(`${userInfo.firstName}${userInfo.lastName}`);
+    setEditableDept(userInfo.department || '');
   }, [userInfo]);
 
-  // 3) 저장 핸들러
+  // 저장 핸들러
   const handleSaveClick = () => {
     setIsEditing(false);
 
-    // 제목/내용 저장
+    // 로컬스토리지에 저장
+    const existing = JSON.parse(localStorage.getItem('saved_files') || '[]');
+    existing.unshift({
+      id: Date.now(),
+      title: reportTitle,
+      content: reportContent,
+      date: editableDate  // YYYY-MM-DD 포맷
+    });
+    localStorage.setItem('saved_files', JSON.stringify(existing));
+
+    // 편집 중이던 내용도 갱신
     localStorage.setItem('edit_subject', reportTitle);
     localStorage.setItem('edit_content', reportContent);
 
-    // 유저 정보 저장
+    // 사용자 정보 업데이트
     const updatedUser = {
       ...userInfo,
       firstName: editableName.charAt(0),
@@ -87,121 +80,93 @@ const Result = () => {
     alert('저장되었습니다!');
   };
 
-  // 4) 공유 (임시)
-  const handleShare = () => {
-    alert('공유 기능은 아직 준비 중입니다!');
-  };
-
-  // 5) PDF 생성 로직
+  // PDF 생성 함수
   const createPdfInstance = () => {
     const pdf = new jsPDF('p', 'pt', 'a4');
-    const { left, right, top } = margins;
-    const pageWidth = pdf.internal.pageSize.getWidth() - left - right;
 
+    // 한글 폰트 등록
     if (fontBase64) {
       pdf.addFileToVFS('NotoSansKR-Regular.ttf', fontBase64);
       pdf.addFont('NotoSansKR-Regular.ttf', 'NotoSansKR', 'normal');
       pdf.setFont('NotoSansKR', 'normal');
     }
 
-    pdf.setFontSize(18);
-    pdf.text(reportTitle, pageWidth / 2 + left, positions.headerY, { align: 'center' });
-    pdf.setFontSize(12);
-    pdf.text(`작성자: ${editableName}`, left, positions.metaYStart);
-    pdf.text(`부서: ${editableDept}`, left + 200, positions.metaYStart);
-    pdf.text(`작성날짜: ${editableDate}`, pageWidth + left, positions.metaYStart, { align: 'right' });
+    const margin = { left: 40, right: 40, top: 40 };
+    const pageWidth = pdf.internal.pageSize.getWidth() - margin.left - margin.right;
 
-    const { r, g, b } = hexToRgb(contentColor);
+    // 제목
+    pdf.setFontSize(18);
+    pdf.text(reportTitle, margin.left + pageWidth / 2, margin.top + 20, { align: 'center' });
+
+    // 작성자·부서·날짜
+    pdf.setFontSize(12);
+    pdf.text(`작성자: ${editableName}`, margin.left, margin.top + 60);
+    pdf.text(`부서: ${editableDept}`, margin.left + 200, margin.top + 60);
+    pdf.text(`작성날짜: ${editableDate}`, margin.left + pageWidth, margin.top + 60, { align: 'right' });
+
+    // 본문
+    const { r, g, b } = hexToRgb('#000000');
     pdf.setTextColor(r, g, b);
-    pdf.setFontSize(contentFontSize);
-    if (isBold) pdf.setFont(undefined, 'bold');
-    if (isItalic) pdf.setFont(undefined, 'italic');
+    pdf.setFontSize(14);
 
     const lines = pdf.splitTextToSize(reportContent, pageWidth);
-    let cursorY = positions.contentYStart;
-    lines.forEach(line => {
-      if (cursorY > pdf.internal.pageSize.getHeight() - top) {
+    let cursorY = margin.top + 100;
+    const lineHeight = 14 * 1.2;
+    lines.forEach((line) => {
+      if (cursorY > pdf.internal.pageSize.getHeight() - margin.top) {
         pdf.addPage();
-        cursorY = top;
+        cursorY = margin.top;
       }
-      pdf.text(line, left, cursorY);
-      cursorY += contentFontSize * 1.2;
+      pdf.text(line, margin.left, cursorY);
+      cursorY += lineHeight;
     });
 
     return pdf;
   };
 
-  // PDF 미리보기/저장
+  // PDF 미리보기
   const handlePreview = () => {
     const blob = createPdfInstance().output('blob');
     setPreviewUrl(URL.createObjectURL(blob));
   };
+
+  // PDF 다운로드
   const handleDownloadPDF = () => {
     createPdfInstance().save(`${reportTitle || 'report'}.pdf`);
   };
 
+  // 공유 (간단 알림)
+  const handleShare = () => alert('공유 기능은 아직 준비 중입니다!');
+
   return (
-    <div style={{ padding: 20 }}>
-      {/* PDF 미리보기 */}
+    <div className="result-container">
       {previewUrl && (
         <iframe
+          className="pdf-preview"
           src={previewUrl}
           title="PDF Preview"
-          style={{ width: '100%', height: 500, border: '1px solid #ccc', marginBottom: 20 }}
         />
       )}
 
-      {/* 헤더 편집 모드 */}
-      {isEditing && (
-        <div style={{ marginBottom: 10, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-          {/* 필요시 편집 툴바 추가 */}
-        </div>
-      )}
-
-      {/* 리포트 내용 */}
-      <div
-        id="report-content"
-        style={{
-          padding: 40,
-          maxWidth: 900,
-          margin: '0 auto 20px',
-          background: '#fff',
-          borderRadius: 12,
-          boxShadow: '0 0 10px rgba(0,0,0,0.05)'
-        }}
-      >
-        {/* 헤더 정보 */}
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            background: '#EEF6FB',
-            padding: 20,
-            borderRadius: 8,
-            marginBottom: 30
-          }}
-        >
-          <div style={{ display: 'flex', gap: 20, fontSize: 16, color: '#092C4C' }}>
+      <div className="report-content">
+        <div className="report-header">
+          <div className="info">
             {isEditing ? (
               <>
                 <input
                   value={editableName}
                   onChange={e => setEditableName(e.target.value)}
                   placeholder="작성자"
-                  style={{ padding: 8, width: 150, borderRadius: 8, border: '1px solid #ccc' }}
                 />
                 <input
                   value={editableDept}
                   onChange={e => setEditableDept(e.target.value)}
                   placeholder="부서"
-                  style={{ padding: 8, width: 150, borderRadius: 8, border: '1px solid #ccc' }}
                 />
                 <input
                   value={editableDate}
                   onChange={e => setEditableDate(e.target.value)}
-                  placeholder="작성날짜"
-                  style={{ padding: 8, width: 150, borderRadius: 8, border: '1px solid #ccc' }}
+                  placeholder="작성날짜 (YYYY-MM-DD)"
                 />
               </>
             ) : (
@@ -213,133 +178,53 @@ const Result = () => {
             )}
           </div>
           {isEditing ? (
-            <button
-              onClick={handleSaveClick}
-              style={{ padding: '8px 16px', background: '#6789F7', color: '#fff', border: 'none', borderRadius: 8 }}
-            >
-              저장
-            </button>
+            <button onClick={handleSaveClick}>저장</button>
           ) : (
-            <button
-              onClick={() => setIsEditing(true)}
-              style={{ padding: 8, background: '#6789F7', color: '#fff', border: 'none', borderRadius: 8 }}
-            >
+            <button onClick={() => setIsEditing(true)}>
               <MdEdit size={20} />
             </button>
           )}
         </div>
 
-        {/* 제목 */}
-        <h2
-          style={{
-            fontSize: 24,
-            fontFamily: contentFontFamily,
-            fontWeight: isBold ? 'bold' : 'normal',
-            fontStyle: isItalic ? 'italic' : 'normal',
-            textDecoration: isUnderline ? 'underline' : 'none',
-            color: contentColor,
-            textAlign: contentAlign,
-            marginBottom: 20
-          }}
-        >
-          {reportTitle}
-        </h2>
-
-        {/* 본문 */}
-        <p
-          style={{
-            whiteSpace: 'pre-line',
-            fontSize: contentFontSize,
-            fontFamily: contentFontFamily,
-            fontWeight: isBold ? 'bold' : 'normal',
-            fontStyle: isItalic ? 'italic' : 'normal',
-            textDecoration: isUnderline ? 'underline' : 'none',
-            color: contentColor,
-            textAlign: contentAlign,
-            lineHeight: 1.5
-          }}
-        >
-          {reportContent}
-        </p>
+        {isEditing ? (
+  <>
+    <input
+      className="report-title-input"
+      value={reportTitle}
+      onChange={e => setReportTitle(e.target.value)}
+      placeholder="제목을 입력하세요"
+    />
+    <textarea
+      className="report-body-textarea"
+      value={reportContent}
+      onChange={e => setReportContent(e.target.value)}
+      placeholder="본문을 입력하세요"
+    />
+  </>
+) : (
+  <>
+    <h2 className="report-title">{reportTitle}</h2>
+    <p className="report-body">{reportContent}</p>
+  </>
+)}
       </div>
 
-      {/* 하단 컨트롤 버튼 */}
-      <div style={{ display: 'flex', justifyContent: 'center', gap: 20, marginBottom: 40 }}>
-        <button
-          onClick={handleSaveClick}
-          style={{
-            padding: 10,
-            background: '#6789F7',
-            color: '#fff',
-            border: 'none',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            borderRadius: 8
-          }}
-        >
+      <div className="controls">
+        <button onClick={handleSaveClick}>
           <MdSave size={20} /> 저장
         </button>
-        <button
-          onClick={handlePreview}
-          style={{
-            padding: 10,
-            background: '#6789F7',
-            color: '#fff',
-            border: 'none',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            borderRadius: 8
-          }}
-        >
+        <button onClick={handlePreview}>
           <MdPictureAsPdf size={20} /> 미리보기
         </button>
         {previewUrl && (
-          <button
-            onClick={handleDownloadPDF}
-            style={{
-              padding: 10,
-              background: '#6789F7',
-              color: '#fff',
-              border: 'none',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              borderRadius: 8
-            }}
-          >
+          <button onClick={handleDownloadPDF}>
             <MdPictureAsPdf size={20} /> PDF 저장
           </button>
         )}
-        <button
-          onClick={() => navigate('/')}
-          style={{
-            padding: 10,
-            background: '#6789F7',
-            color: '#fff',
-            border: 'none',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            borderRadius: 8
-          }}
-        >
+        <button onClick={() => navigate('/')}>
           <MdHome size={20} /> 홈
         </button>
-        <button
-          onClick={handleShare}
-          style={{
-            padding: 10,
-            background: '#6789F7',
-            color: '#fff',
-            border: 'none',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            borderRadius: 8
-          }}
-        >
+        <button onClick={handleShare}>
           <MdShare size={20} /> 공유
         </button>
       </div>

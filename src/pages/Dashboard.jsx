@@ -3,15 +3,16 @@ import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import '../styles/Dashboard.css';
 import Rightbar from '../components/Rightbar';
+import { useNavigate } from 'react-router-dom';
 
 const Dashboard = () => {
   // state 정의
   const [reports, setReports] = useState([]);
-
   const [recentGames, setRecentGames] = useState([]);
   const [selectedDate, setSelectedDate] = useState(null);
+  const navigate = useNavigate();
 
-  // 팀 이름–로고 매핑
+  // KBO 팀 이름–로고 매핑
   const baseballTeams = [
     { name: 'LG 트윈스', logo: '/assets/LG.png' },
     { name: '두산 베어스', logo: '/assets/DOOSAN.png' },
@@ -33,58 +34,74 @@ const Dashboard = () => {
 
   useEffect(() => {
     // 1) 로컬스토리지에서 기사 불러오기
-    const storedReports = JSON.parse(localStorage.getItem('saved_files')) || [];
-    setReports(storedReports);
+    const stored = JSON.parse(localStorage.getItem('saved_files')) || [];
 
 
-    // 3) 최근 경기 결과 예시 (크롤링한 데이터를 여기에 넣으세요)
-    const storedGames =
-      JSON.parse(localStorage.getItem('recentGames')) || [
-        {
-          date: '2025-07-14',
-          home: '한화 이글스',
-          homeScore: 4,
-          away: '롯데 자이언츠',
-          awayScore: 2,
-        },
-        {
-          date: '2025-07-13',
-          home: 'LG 트윈스',
-          homeScore: 3,
-          away: '키움 히어로즈',
-          awayScore: 5,
-        },
-        {
-          date: '2025-07-12',
-          home: '두산 베어스',
-          homeScore: 2,
-          away: '삼성 라이온즈',
-          awayScore: 1,
-        },
-      ];
+
+    const withDates = stored.map(r => ({
+      ...r,
+      date: r.date
+        ? r.date
+        : (r.createdAt || r.timestamp)
+          ? new Date(r.createdAt || r.timestamp).toISOString().slice(0, 10)
+          : new Date().toISOString().slice(0, 10)
+    }));
+    setReports(withDates);
+
+    // 2) 최근 경기 결과 (예시)
+    const storedGames = JSON.parse(localStorage.getItem('recentGames')) || [
+      {
+        date: '2025-07-14',
+        home: '한화 이글스',
+        homeScore: 4,
+        away: '롯데 자이언츠',
+        awayScore: 2,
+      },
+      {
+        date: '2025-07-13',
+        home: 'LG 트윈스',
+        homeScore: 3,
+        away: '키움 히어로즈',
+        awayScore: 5,
+      },
+      {
+        date: '2025-07-12',
+        home: '두산 베어스',
+        homeScore: 2,
+        away: '삼성 라이온즈',
+        awayScore: 1,
+      },
+    ];
     setRecentGames(storedGames);
   }, []);
 
-   // 달력에 표시할 기사만
+  // 달력 각 날짜 타일에 기사 표시
   const tileContent = ({ date, view }) => {
     if (view !== 'month') return null;
     const dateStr = date.toISOString().slice(0, 10);
+    const dayReports = reports.filter(r => r.date === dateStr);
+    if (dayReports.length === 0) return null;
+
     return (
       <div className="calendar-tile-content">
-        {reports
-          .filter(r => r.date === dateStr)
-          .map((a, i) => (
-            <div key={i} className="calendar-article">
-              📰 {a.title}
-            </div>
-          ))
-        }
+        {dayReports.map((a, i) => (
+          <div key={i} className="calendar-article">
+             {a.title}
+          </div>
+        ))}
       </div>
     );
   };
 
-  // 캘린더 각 날짜 타일에 일정 표시
-  
+  // 기사 있는 날짜는 배경 강조
+  const tileClassName = ({ date, view }) => {
+    if (view === 'month') {
+      const dateStr = date.toISOString().slice(0, 10);
+      return reports.some(r => r.date === dateStr) ? 'has-article' : null;
+    }
+    return null;
+  };
+
   return (
     <div className="dashboard-container">
       <div className="dashboard-main">
@@ -95,8 +112,9 @@ const Dashboard = () => {
           <Calendar
             value={selectedDate}
             onChange={setSelectedDate}
-            tileContent={tileContent}
             locale="ko-KR"
+            tileContent={tileContent}
+            tileClassName={tileClassName}
           />
         </div>
 
@@ -123,10 +141,17 @@ const Dashboard = () => {
         {/* 최신 기사 */}
         <div className="articles-card">
           <h3>📰 최신 기사</h3>
-          {reports.map((article, idx) => (
-            <div key={idx} className="article">
+          {reports.slice(0, 3).map((article, idx) => (
+            <div
+              key={idx}
+              className="article"
+              onClick={() => {
+                localStorage.setItem('edit_subject', article.title);
+                localStorage.setItem('edit_content', article.content);
+                navigate('/result');
+              }}
+            >
               <div className="article-title">{article.title}</div>
-              <div className="article-summary">{article.summary}</div>
               <div className="article-date">{article.date}</div>
             </div>
           ))}

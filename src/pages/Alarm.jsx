@@ -35,7 +35,7 @@ const Alarm = () => {
   };
 
   return (
-    <div style={{ padding: '0px 40px', maxWidth: '800px', margin: '0px auto' }}>
+    <div style={{ padding: '0px 40px', maxWidth: '800px', margin: '80px auto' }}>
       <h2 style={{ fontSize: 24, marginBottom: 20, color: '#092C4C' }}>알림</h2>
 
       <button
