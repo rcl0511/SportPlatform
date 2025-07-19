@@ -185,3 +185,87 @@
 .calendar-article:hover {
   box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
 }
+
+.date-articles-popup {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  right: 16px;
+  background: #ffffff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  padding: 16px;
+  z-index: 10;
+}
+.date-articles-popup h3 {
+  margin: 0 0 12px;
+  font-size: 1rem;
+  color: #305078;
+}
+.date-articles-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+.date-article-card {
+  padding: 8px 12px;
+  background: #F6FAFD;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.date-article-card:hover {
+  background: #E8F2FA;
+}
+.date-article-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #1e2c3d;
+}
+.date-article-snippet {
+  font-size: 0.85rem;
+  color: #555;
+  margin-top: 4px;
+}
+
+/* 전체 달력 너비 조정 (필요시) */
+.react-calendar {
+  width: 100%;              /* 부모 컨테이너에 맞춰 늘어나도록 */
+  max-width: none;          /* 기본 max-width 해제 */
+}
+
+/* 요일 헤더(월, 화, 수 ...) 높이/패딩 조정 */
+.react-calendar__month-view__weekdays__weekday abbr {
+  padding: 12px 0;          /* 위아래 여백 더 줘서 헤더도 키움 */
+}
+
+/* 실제 날짜 셀(.react-calendar__tile) 높이/패딩 조정 */
+.react-calendar__tile {
+  padding: 10px 0 !important;  /* 위아래 패딩을 늘려서 셀 세로 크기 증가 */
+  height: 100px !important;     /* 원하는 픽셀 높이로 설정 */
+  max-width: none !important;   /* 셀 너비 제한 해제 */
+}
+
+/* 월간뷰에서 요일별 셀 너비 균일하게 유지 */
+.react-calendar__month-view__days__day {
+  flex-grow: 1;              /* 7등분된 그리드에서 균등 확장 */
+}
+
+.react-calendar__tile {
+  height: auto !important;       /* 고정 높이 해제 */
+  min-height: 100px !important;  /* 원하시는 최소 높이 */
+  padding: 8px !important;       /* 안쪽 여백 */
+}
+
+/* 2) 요일 헤더 높이도 키우고 싶다면 */
+.react-calendar__month-view__weekdays__weekday abbr {
+  padding: 12px 0 !important;
+}
+
+/* 3) 셀 그리드 균등 분배 */
+.react-calendar__month-view__days__day {
+  flex-grow: 1;
+}

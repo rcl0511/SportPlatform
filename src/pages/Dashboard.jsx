@@ -1,3 +1,5 @@
+// src/pages/Dashboard.jsx
+
 import React, { useState, useEffect } from 'react';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
@@ -6,13 +8,11 @@ import Rightbar from '../components/Rightbar';
 import { useNavigate } from 'react-router-dom';
 
 const Dashboard = () => {
-  // state 정의
   const [reports, setReports] = useState([]);
   const [recentGames, setRecentGames] = useState([]);
   const [selectedDate, setSelectedDate] = useState(null);
   const navigate = useNavigate();
 
-  // KBO 팀 이름–로고 매핑
   const baseballTeams = [
     { name: 'LG 트윈스', logo: '/assets/LG.png' },
     { name: '두산 베어스', logo: '/assets/DOOSAN.png' },
@@ -26,18 +26,13 @@ const Dashboard = () => {
     { name: 'KT WIZ', logo: '/assets/KT.png' },
   ];
 
-  // 팀 이름으로 로고 찾기
-  const getLogo = (teamName) => {
-    const team = baseballTeams.find((t) => t.name === teamName);
+  const getLogo = teamName => {
+    const team = baseballTeams.find(t => t.name === teamName);
     return team ? team.logo : '';
   };
 
   useEffect(() => {
-    // 1) 로컬스토리지에서 기사 불러오기
     const stored = JSON.parse(localStorage.getItem('saved_files')) || [];
-
-
-
     const withDates = stored.map(r => ({
       ...r,
       date: r.date
@@ -48,87 +43,89 @@ const Dashboard = () => {
     }));
     setReports(withDates);
 
-    // 2) 최근 경기 결과 (예시)
     const storedGames = JSON.parse(localStorage.getItem('recentGames')) || [
-      {
-        date: '2025-07-14',
-        home: '한화 이글스',
-        homeScore: 4,
-        away: '롯데 자이언츠',
-        awayScore: 2,
-      },
-      {
-        date: '2025-07-13',
-        home: 'LG 트윈스',
-        homeScore: 3,
-        away: '키움 히어로즈',
-        awayScore: 5,
-      },
-      {
-        date: '2025-07-12',
-        home: '두산 베어스',
-        homeScore: 2,
-        away: '삼성 라이온즈',
-        awayScore: 1,
-      },
+      { date: '2025-07-14', home: '한화 이글스', homeScore: 4, away: '롯데 자이언츠', awayScore: 2 },
+      { date: '2025-07-13', home: 'LG 트윈스', homeScore: 3, away: '키움 히어로즈', awayScore: 5 },
+      { date: '2025-07-12', home: '두산 베어스', homeScore: 2, away: '삼성 라이온즈', awayScore: 1 },
     ];
     setRecentGames(storedGames);
   }, []);
 
-  // 달력 각 날짜 타일에 기사 표시
+  const handleDateClick = date => {
+    setSelectedDate(date);
+  };
+
   const tileContent = ({ date, view }) => {
     if (view !== 'month') return null;
     const dateStr = date.toISOString().slice(0, 10);
     const dayReports = reports.filter(r => r.date === dateStr);
-    if (dayReports.length === 0) return null;
-
+    if (!dayReports.length) return null;
     return (
       <div className="calendar-tile-content">
         {dayReports.map((a, i) => (
           <div key={i} className="calendar-article">
-             {a.title}
+            {a.title}
           </div>
         ))}
       </div>
     );
   };
 
-  // 기사 있는 날짜는 배경 강조
   const tileClassName = ({ date, view }) => {
-    if (view === 'month') {
-      const dateStr = date.toISOString().slice(0, 10);
-      return reports.some(r => r.date === dateStr) ? 'has-article' : null;
-    }
-    return null;
+    if (view !== 'month') return null;
+    const dateStr = date.toISOString().slice(0, 10);
+    return reports.some(r => r.date === dateStr) ? 'has-article' : null;
   };
+
+  const selectedDateStr = selectedDate?.toISOString().slice(0, 10);
+  const selectedReports = selectedDateStr
+    ? reports.filter(r => r.date === selectedDateStr)
+    : [];
 
   return (
     <div className="dashboard-container">
       <div className="dashboard-main">
         <h2>⚾ 오늘의 야구 뉴스 & 경기 일정</h2>
-
-        {/* 캘린더 카드 */}
         <div className="calendar-card">
           <Calendar
             value={selectedDate}
             onChange={setSelectedDate}
+            onClickDay={handleDateClick}
             locale="ko-KR"
             tileContent={tileContent}
             tileClassName={tileClassName}
           />
+          {selectedReports.length > 0 && (
+            <div className="date-articles-popup">
+              <h3>{selectedDateStr} 작성된 기사</h3>
+              <div className="date-articles-list">
+                {selectedReports.map((a, i) => (
+                  <div
+                    key={i}
+                    className="date-article-card"
+                    onClick={() => {
+                      localStorage.setItem('edit_subject', a.title);
+                      localStorage.setItem('edit_content', a.content);
+                      navigate('/result');
+                    }}
+                  >
+                    <div className="date-article-title">{a.title}</div>
+                    <div className="date-article-snippet">
+                      {a.content.slice(0, 60).trim()}…
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* 팀 목록 */}
         <div className="teams-card">
           <h3>2025 KBO 야구팀</h3>
           <div className="teams-grid">
             {baseballTeams.map((team, idx) => (
               <div key={idx} className="team-item">
-                <img
-                  src={team.logo}
-                  alt={team.name}
-                  className="team-logo"
-                />
+                <img src={team.logo} alt={team.name} className="team-logo" />
                 <span>{team.name}</span>
               </div>
             ))}
@@ -136,9 +133,7 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* 오른쪽 사이드바 */}
       <Rightbar>
-        {/* 최신 기사 */}
         <div className="articles-card">
           <h3>📰 최신 기사</h3>
           {reports.slice(0, 3).map((article, idx) => (
@@ -157,27 +152,18 @@ const Dashboard = () => {
           ))}
         </div>
 
-        {/* 최근 경기 결과 */}
         <div className="games-card">
           <h3>⚾ 최근 경기 결과</h3>
           {recentGames.map((game, idx) => (
             <div key={idx} className="game">
               <div className="game-teams">
-                <img
-                  src={getLogo(game.home)}
-                  alt={game.home}
-                  className="team-logo-sm"
-                />
+                <img src={getLogo(game.home)} alt={game.home} className="team-logo-sm" />
                 <span className="team-name">{game.home}</span>
                 <span className="score">{game.homeScore}</span>
                 <span className="vs">:</span>
                 <span className="score">{game.awayScore}</span>
                 <span className="team-name">{game.away}</span>
-                <img
-                  src={getLogo(game.away)}
-                  alt={game.away}
-                  className="team-logo-sm"
-                />
+                <img src={getLogo(game.away)} alt={game.away} className="team-logo-sm" />
               </div>
               <div className="game-date">{game.date}</div>
             </div>
