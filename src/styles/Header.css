@@ -1,0 +1,40 @@
+.header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: clamp(0.5rem, 2vw, 1rem) clamp(1rem, 4vw, 2rem);
+  background: #F6FAFD;
+  border-bottom: 1px solid #EAEEF4;
+  z-index: 100;
+}
+.header__logo {
+  font-size: clamp(1.25rem, 3vw, 2rem);
+  color: #092C4C;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.header__actions {
+  display: flex;
+  gap: clamp(0.5rem, 2vw, 1rem);
+}
+.btn {
+  padding: clamp(0.5rem, 1.5vw, 1rem) clamp(1rem, 3vw, 1.5rem);
+  font-size: clamp(0.75rem, 1.5vw, 1rem);
+  border-radius: 2rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn--primary {
+  background: #514EF3;
+  color: #fff;
+  border: none;
+}
+.btn--outline {
+  background: #fff;
+  color: #514EF3;
+  border: 1px solid #514EF3;
+}

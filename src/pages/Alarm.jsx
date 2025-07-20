@@ -1,19 +1,18 @@
 // src/pages/Alarm.jsx
 import React, { useEffect, useState } from 'react';
 import { MdNotificationsActive, MdClose } from 'react-icons/md';
+import '../styles/Alarm.css';
 
 const Alarm = () => {
   const [alarms, setAlarms] = useState([]);
 
-  // 🔄 알람 불러오기 + 빨간 점 제거
   useEffect(() => {
     const saved = JSON.parse(localStorage.getItem('alarm_list') || '[]');
     setAlarms(saved);
     localStorage.setItem('hasNewAlarm', 'false');
     localStorage.setItem('hasNewDashboardAlert', 'false');
   }, []);
-  
-  // 📢 관리자 공지 생성
+
   const handleFakeNotice = () => {
     const newAlarm = {
       id: Date.now(),
@@ -27,7 +26,6 @@ const Alarm = () => {
     localStorage.setItem('hasNewDashboardAlert', 'true');
   };
 
-  // 🗑️ 알람 삭제
   const handleDelete = (id) => {
     const filtered = alarms.filter((alarm) => alarm.id !== id);
     setAlarms(filtered);
@@ -35,65 +33,33 @@ const Alarm = () => {
   };
 
   return (
-    <div style={{ padding: '0px 40px', maxWidth: '800px', margin: '80px auto' }}>
-      <h2 style={{ fontSize: 24, marginBottom: 20, color: '#092C4C' }}>알림</h2>
+    <section className="alarm-container">
+      <h2 className="alarm-title">알림</h2>
 
-      <button
-        onClick={handleFakeNotice}
-        style={{
-          padding: '10px 16px',
-          marginBottom: '24px',
-          background: '#6789F7',
-          color: 'white',
-          border: 'none',
-          borderRadius: 8,
-          cursor: 'pointer',
-        }}
-      >
+      <button className="btn btn--notice" onClick={handleFakeNotice}>
         📢 관리자 공지 등록
       </button>
 
       {alarms.length === 0 ? (
-        <div style={{ color: '#aaa', fontSize: '16px' }}>알림이 없습니다.</div>
+        <p className="alarm-empty">알림이 없습니다.</p>
       ) : (
         alarms.map((alarm) => (
-          <div
-            key={alarm.id}
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              background: '#F6FAFD',
-              border: '1px solid #EAEEF4',
-              padding: '15px 20px',
-              borderRadius: 12,
-              marginBottom: 12,
-              boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <MdNotificationsActive size={20} color="#092C4C" />
+          <article key={alarm.id} className="alarm-item">
+            <div className="alarm-item__info">
+              <MdNotificationsActive className="alarm-item__icon" />
               <div>
-                <div style={{ fontSize: 16, color: '#092C4C' }}>{alarm.message}</div>
-                <div style={{ fontSize: 12, color: '#888', marginTop: 4 }}>{alarm.time}</div>
+                <p className="alarm-item__message">{alarm.message}</p>
+                <p className="alarm-item__time">{alarm.time}</p>
               </div>
             </div>
 
-            <button
-              onClick={() => handleDelete(alarm.id)}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: '#999',
-                cursor: 'pointer',
-              }}
-            >
-              <MdClose size={18} />
+            <button className="alarm-item__delete" onClick={() => handleDelete(alarm.id)}>
+              <MdClose />
             </button>
-          </div>
+          </article>
         ))
       )}
-    </div>
+    </section>
   );
 };
 

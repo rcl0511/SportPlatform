@@ -1,3 +1,5 @@
+/* src/styles/Global.css (Dashboard + Edit) */
+
 /* ==========================================================================
    Dashboard Styles
    ========================================================================== */
@@ -7,7 +9,6 @@
   position: relative;
   display: flex;
 }
-
 .dashboard-main {
   padding: 24px;
   background: #F6FAFD;
@@ -24,13 +25,143 @@
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   margin-bottom: 30px;
+  box-sizing: border-box;
+  overflow-x: hidden; /* 달력 내부 넘침 방지 */
 }
 
+/* 전체 달력 너비 조정 */
+.react-calendar {
+  width: 100%;
+  max-width: none;
+}
+.react-calendar__navigation {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+.react-calendar__navigation button {
+  color: #092C4C;
+  font-size: 18px;
+  font-weight: bold;
+  background: none;
+  border: none;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+.react-calendar__month-view__weekdays {
+  text-align: center;
+  font-weight: bold;
+  font-size: 14px;
+  color: #7E92A2;
+  margin-bottom: 8px;
+}
+.react-calendar__month-view__weekdays__weekday abbr {
+  padding: 12px 0;
+}
+.react-calendar__tile {
+  padding: 8px 0 !important;
+  height: auto !important;
+  min-height: 80px;
+  position: relative;
+  box-sizing: border-box;
+}
+.react-calendar__tile--active {
+  background: #514EF3;
+  color: white;
+  border-radius: 8px;
+}
+.react-calendar__tile:hover {
+  background: #D6E4FF;
+  border-radius: 8px;
+}
 
+.calendar-tile-content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 2px;
+  max-height: 80px;
+  overflow-y: auto;
+}
 
+/* 경기 일정, 기사 카드 디자인 */
+.calendar-match,
+.calendar-article {
+  display: block;
+  margin: 2px auto;
+  width: 85%;
+  font-size: 8px;
+  border-radius: 4px;
+  padding: 2px 4px;
+  text-align: center;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.calendar-match {
+  color: #305078;
+  background: #E8F2FA;
+}
+.calendar-article {
+  background: #3e71ff !important;
+  color: #fff !important;
+  font-size: 15px !important;
+  font-weight: 300;
+  padding: 6px 12px !important;
+  border-radius: 6px !important;
+  border: none !important;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1) !important;
+  transition: box-shadow 0.2s;
+}
+.calendar-article:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+}
 
-
-
+/* 날짜별 팝업 */
+.date-articles-popup {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  right: 16px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  padding: 16px;
+  z-index: 10;
+}
+.date-articles-popup h3 {
+  margin: 0 0 12px;
+  font-size: 1rem;
+  color: #305078;
+}
+.date-articles-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+.date-article-card {
+  padding: 8px 12px;
+  background: #F6FAFD;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.date-article-card:hover {
+  background: #E8F2FA;
+}
+.date-article-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #1e2c3d;
+}
+.date-article-snippet {
+  font-size: 0.85rem;
+  color: #555;
+  margin-top: 4px;
+}
 
 /* ==========================================================================
    Teams Grid
@@ -41,7 +172,6 @@
   gap: 16px;
   margin-top: 12px;
 }
-
 .team-item {
   display: flex;
   flex-direction: column;
@@ -58,7 +188,6 @@
   text-align: center;
   margin-bottom: 12px;
 }
-
 .team-logo {
   width: 72px;
   height: 72px;
@@ -76,18 +205,15 @@
   border-bottom: 1px solid #7875FF;
   padding-bottom: 12px;
 }
-
 .article-title {
   font-weight: bold;
-  color: #000000;
+  color: #000;
 }
-
 .article-summary {
   font-size: 13px;
-  color: #000000;
+  color: #000;
   margin: 4px 0;
 }
-
 .article-date {
   font-size: 12px;
   color: #A0AEC0;
@@ -97,64 +223,55 @@
    Recent Games Card
    ========================================================================== */
 .games-card {
-  background-color: #FFFFFF;
+  background: #fff;
   border-radius: 8px;
   padding: 16px;
   margin-top: 24px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
-
 .games-card h3 {
   margin: 0 0 12px;
   font-size: 1.1rem;
-  color: #333333;
+  color: #333;
 }
-
 .game {
   display: flex;
   flex-direction: column;
   margin-bottom: 16px;
 }
-
 .game-teams {
   display: flex;
   align-items: center;
 }
-
 .team-logo-sm {
   width: 24px;
   height: 24px;
   object-fit: contain;
   margin: 0 6px;
 }
-
 .team-name {
   font-size: 0.9rem;
   font-weight: 500;
-  color: #444444;
+  color: #444;
   margin: 0 4px;
   white-space: nowrap;
 }
-
 .score {
   font-size: 1rem;
   font-weight: 700;
-  color: #222222;
+  color: #222;
   margin: 0 4px;
 }
-
 .vs {
   font-size: 0.9rem;
-  color: #888888;
+  color: #888;
   margin: 0 4px;
 }
-
 .game-date {
   font-size: 0.8rem;
-  color: #777777;
+  color: #777;
   margin-left: 34px;
 }
-
 .game:last-child {
   margin-bottom: 0;
 }

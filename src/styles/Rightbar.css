@@ -1,0 +1,98 @@
+:root {
+  --sidebar-min: 15rem;
+  --sidebar-max: 25rem;
+  --toggle-width: clamp(2rem, 4vw, 3rem);
+  --toggle-height: clamp(4rem, 8vw, 6rem);
+  --sidebar-top: clamp(4rem, 10vh, 6rem);
+  --sidebar-transition: 0.3s ease;
+}
+
+.rightbar {
+  position: fixed;
+  top: var(--sidebar-top);
+  right: 0;
+  bottom: 0;
+  width: 0;
+  overflow-y: auto;
+  background: rgba(222,240,255,0.9);
+  border-left: none;
+  padding: 0;
+  transition: width var(--sidebar-transition), padding var(--sidebar-transition);
+  z-index: 1000;
+}
+
+.rightbar--open {
+  width: clamp(var(--sidebar-min), 20vw, var(--sidebar-max));
+  border-left: 1px solid #EAEEF4;
+  padding: clamp(1rem, 3vw, 2rem);
+}
+
+.rightbar__toggle {
+  position: fixed;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
+  width: var(--toggle-width);
+  height: var(--toggle-height);
+  background: #D0E6F8;
+  border: none;
+  border-top-left-radius: 0.5rem;
+  border-bottom-left-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 1001;
+  transition: right var(--sidebar-transition);
+}
+
+/* 토글 위치 조정: 사이드바 열릴 때 버튼 이동 */
+.rightbar--open + .rightbar__toggle {
+  right: calc(clamp(var(--sidebar-min), 20vw, var(--sidebar-max)) + var(--toggle-width));
+}
+
+/* Tablet & up to Mobile (≤768px): 항상 토글 표시 */
+@media (max-width: 768px) {
+  .rightbar {
+    top: clamp(3rem, 8vh, 5rem);
+    width: 100%;
+    height: auto;
+    bottom: auto;
+  }
+  .rightbar--open {
+    width: 100%;
+    padding: clamp(0.5rem, 2vw, 1rem);
+    border-left: none;
+    border-top: 1px solid #EAEEF4;
+  }
+  .rightbar__toggle {
+    display: flex;
+  }
+}
+
+/* Very small phones (≤450px): 최소 너비만큼만 보이게 */
+@media (max-width: 450px) {
+  .rightbar {
+    width: var(--toggle-width);
+    bottom: auto;
+  }
+  .rightbar--open {
+    width: 100%;
+  }
+  .rightbar__toggle {
+    display: flex;
+    right: 0;
+  }
+}
+
+/* Extra small phones (≤350px): 토글 크기 추가 축소 */
+@media (max-width: 350px) {
+  :root {
+    --toggle-width: clamp(1.5rem, 6vw, 2.5rem);
+    --toggle-height: clamp(3rem, 10vw, 4rem);
+  }
+  .rightbar__toggle {
+    width: var(--toggle-width);
+    height: var(--toggle-height);
+  }
+}
