@@ -81,7 +81,7 @@ const Edit = () => {
     localStorage.setItem('edit_subject', subject);
     localStorage.setItem('edit_tags', JSON.stringify(tags));
     localStorage.setItem('edit_fileName', fileName);
-    navigate('/edit2');
+    navigate('/edit2', { state: { uploadedFile } });
   };
 
   const handleCancel = () => navigate('/');
