@@ -1,19 +1,23 @@
-// src/pages/Edit.jsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Rightbar from '../components/Rightbar';
 import '../styles/Edit.css';
+import * as XLSX from 'xlsx';
+
+
+
+
 
 const Edit = () => {
   const navigate = useNavigate();
-
+const [expandedCsvs, setExpandedCsvs] = useState({});
   const [subject, setSubject] = useState('');
   const [inputValue, setInputValue] = useState('');
   const [tags, setTags] = useState([]);
-  const [fileName, setFileName] = useState('');
-  const [previewSrc, setPreviewSrc] = useState(null);
-  const [previewCsv, setPreviewCsv] = useState([]);
-  const [uploadedFile, setUploadedFile] = useState(null);
+
+  const [uploadedFiles, setUploadedFiles] = useState([]);
+  const [previewImages, setPreviewImages] = useState([]);
+  const [previewCsvs, setPreviewCsvs] = useState([]);
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && inputValue.trim()) {
@@ -23,69 +27,78 @@ const Edit = () => {
     }
   };
 
+  const handleFileChange = (e) => {
+    const files = Array.from(e.target.files);
+    const newImages = [];
+    const newCsvs = [];
 
+    files.forEach((file) => {
+      const reader = new FileReader();
 
-   const handleFileChange = (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
+      if (file.type.startsWith('image/')) {
+        reader.onload = () => {
+          newImages.push({ name: file.name, src: reader.result });
+          setPreviewImages((prev) => [...prev, ...newImages]);
+        };
+        reader.readAsDataURL(file);
+      } else if (/\.csv$/i.test(file.name)) {
+        reader.onload = () => {
+          const text = reader.result;
+          const rows = text.trim().split(/\r?\n/).map(row => row.split(','));
+          newCsvs.push({ name: file.name, rows });
+          setPreviewCsvs((prev) => [...prev, ...newCsvs]);
+        };
+        reader.readAsText(file);
 
-  // 파일 정보 상태 업데이트
-  setFileName(file.name);
-  setUploadedFile(file);
-  setPreviewSrc(null);
-  setPreviewCsv([]);
+      } else if (/\.xlsx$/i.test(file.name) || /\.xls$/i.test(file.name)) {
+        reader.onload = (e) => {
+          const data = new Uint8Array(reader.result); // ✅ 안전함
+          const workbook = XLSX.read(data, { type: 'array' });
 
-  const reader = new FileReader();
+          const firstSheet = workbook.SheetNames[0];
+          const sheet = workbook.Sheets[firstSheet];
+          const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
-  if (file.type.startsWith('image/')) {
-    // 이미지 파일: DataURL로 읽어서 저장 및 미리보기
-    reader.onload = () => {
-      const result = reader.result;
-      localStorage.setItem('edit_file', result);
-      localStorage.setItem('edit_fileName', file.name);
-      setPreviewSrc(result);
-    };
-    reader.readAsDataURL(file);
+          newCsvs.push({ name: file.name, rows });
+          setPreviewCsvs((prev) => [...prev, ...newCsvs]);
+        };
+        reader.readAsArrayBuffer(file);
+      }
+    });
 
-  } else if (/\.csv$/i.test(file.name)) {
-    // CSV 파일: 텍스트로 읽어서 파싱 후 저장 및 미리보기
-    reader.onload = () => {
-      const text = reader.result;
-      localStorage.setItem('edit_file', text);
-      localStorage.setItem('edit_fileName', file.name);
-      const rows = text.trim().split(/\r?\n/).map(row => row.split(','));
-      setPreviewCsv(rows);
-    };
-    reader.readAsText(file);
-
-  } else {
-    // 그 외 파일: 텍스트로만 저장 (미리보기 없음)
-    reader.onload = () => {
-      const text = reader.result;
-      localStorage.setItem('edit_file', text);
-      localStorage.setItem('edit_fileName', file.name);
-      setPreviewSrc(null);
-    };
-    reader.readAsText(file);
-  }
+    setUploadedFiles((prev) => [...prev, ...files]);
+  };
+  
+  const toggleCsvExpansion = (fileName) => {
+  setExpandedCsvs((prev) => ({
+    ...prev,
+    [fileName]: !prev[fileName],
+  }));
 };
+
+
   const handleRemoveTag = (tagToRemove) => {
     setTags(tags.filter((tag) => tag !== tagToRemove));
   };
 
   const handleNextStep = () => {
     if (!subject.trim()) {
-      alert('기사 제목 또는 주제를 입력해주세요!');
+      alert('요청사항을 입력해주세요!');
       return;
     }
+    if (uploadedFiles.length === 0) {
+      alert('경기 데이터를 반드시 첨부해주세요!');
+      return;
+    }
+
     localStorage.setItem('edit_subject', subject);
     localStorage.setItem('edit_tags', JSON.stringify(tags));
-    localStorage.setItem('edit_fileName', fileName);
-    navigate('/edit2', { state: { uploadedFile } });
+    localStorage.setItem('edit_files', JSON.stringify(uploadedFiles.map(f => f.name)));
+    navigate('/edit2', { state: { uploadedFiles } });
   };
 
   const handleCancel = () => navigate('/');
-  const handleChat = () => navigate('/chat');
+
 
   return (
     <div className="edit-container edit-layout">
@@ -97,11 +110,11 @@ const Edit = () => {
 
         <div className="edit-form">
           <div className="form-group">
-            <label>기사 제목/핵심주제 입력</label>
+            <label>요청사항</label>
             <textarea
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
-              placeholder="예: LG 트윈스, 두산에 역전승!"
+              placeholder="예: 두산 투수의 관점에서 기사 작성해 주세요"
             />
           </div>
 
@@ -111,7 +124,7 @@ const Edit = () => {
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="예: 야구, 축구, 배구"
+              placeholder="예: 타점, 투수, 홈런"
             />
             <div className="tags-container">
               {tags.map((tag, idx) => (
@@ -124,21 +137,24 @@ const Edit = () => {
           </div>
 
           <div className="form-group">
-            <label>경기 데이터/자료 첨부 (선택)</label>
+            <label>경기 데이터/자료 첨부 (필수)</label>
             <label htmlFor="fileUpload" className="file-upload-label">
-              {fileName || '파일을 선택하거나 드래그'}
+              {uploadedFiles.length > 0
+                ? `${uploadedFiles.length}개 파일 선택됨`
+                : '파일을 선택하거나 드래그'}
             </label>
             <input
               id="fileUpload"
               type="file"
               className="file-input"
               onChange={handleFileChange}
+              multiple
+              required
             />
           </div>
 
           <div className="actions">
             <button className="button-white" onClick={handleCancel}>취소</button>
-            <button className="button-primary" onClick={handleChat}>AI와 대화하기</button>
             <button className="button-primary" onClick={handleNextStep}>다음단계</button>
           </div>
         </div>
@@ -146,21 +162,46 @@ const Edit = () => {
 
       <Rightbar>
         <div className="file-preview">
-          {previewSrc ? (
-            <img src={previewSrc} alt={fileName} />
-          ) : previewCsv.length ? (
-            <table className="csv-preview">
-              <tbody>
-                {previewCsv.map((row, i) => (
-                  <tr key={i}>
-                    {row.map((cell, j) => (
-                      <td key={j}>{cell}</td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          ) : (
+          {previewImages.length > 0 && (
+            <div className="image-preview-group">
+              <h4>이미지 미리보기</h4>
+              {previewImages.map((img, idx) => (
+                <img key={idx} src={img.src} alt={img.name} style={{ width: '100%', marginBottom: '8px' }} />
+              ))}
+            </div>
+          )}
+
+          {previewCsvs.map((csv, idx) => {
+  const isExpanded = expandedCsvs[csv.name];
+  const visibleRows = isExpanded ? csv.rows : csv.rows.slice(0, 10);
+
+  return (
+    <div key={idx} style={{ marginBottom: '1rem' }}>
+      <strong>{csv.name}</strong>
+      <table className="csv-preview">
+        <tbody>
+          {visibleRows.map((row, i) => (
+            <tr key={i}>
+              {row.map((cell, j) => (
+                <td key={j}>{cell}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {csv.rows.length > 10 && (
+        <button
+          onClick={() => toggleCsvExpansion(csv.name)}
+          className="csv-toggle-btn"
+        >
+          {isExpanded ? '간단히 보기 ▲' : '더보기 ▼'}
+        </button>
+      )}
+    </div>
+  );
+})}
+
+          {previewImages.length === 0 && previewCsvs.length === 0 && (
             <div className="no-preview">이미지 또는 CSV 파일만 미리보기가 가능합니다.</div>
           )}
         </div>

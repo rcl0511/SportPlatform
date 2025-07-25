@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useContext } from 'react';
+import  { useState, useEffect, useContext } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AuthContext } from '../contexts/AuthContext.js';
-import AiChat from '../components/AiChat.jsx';
+
 import '../styles/Edit3.css';   // 스타일 import
 
 const Edit3 = () => {
@@ -19,13 +19,8 @@ const Edit3 = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const sidebarWidth = isSidebarOpen ? 600 : 300;
 
-  // 출처 데이터 상태
-  const [allSources, setAllSources] = useState([]);
-  const [visibleCount, setVisibleCount] = useState(5);
-  const [selectedSources, setSelectedSources] = useState([]);
 
-  // 챗 모드 상태
-  const [isChatMode, setIsChatMode] = useState(false);
+
 
   // 이미지 업로드 및 레이아웃 조정 상태
   const [imageUrl, setImageUrl] = useState(null);
@@ -37,46 +32,49 @@ const Edit3 = () => {
 
   // 초기 데이터 로딩
   useEffect(() => {
-    const savedTitle = localStorage.getItem('edit_subject');
-    const savedContent = localStorage.getItem('edit_content');
-    if (savedTitle) setReportTitle(savedTitle);
-    if (savedContent) setReportContent(savedContent);
+    if (topic) setReportTitle(topic);  // 넘겨받은 제목을 우선 적용
 
-    setToday(new Date().toLocaleDateString('en-US', {
-      year: 'numeric', month: 'short', day: 'numeric',
-    }));
+  const savedContent = localStorage.getItem('edit_content');
+  if (savedContent) setReportContent(savedContent);
 
-    if (!topic) return;
-    const formData = new FormData();
-    formData.append('topic', topic);
-    if (base64 && fileName) {
-      if (base64.startsWith('data:')) {
-        const byteString = atob(base64.split(',')[1]);
-        const mimeString = base64.split(',')[0].split(':')[1].split(';')[0];
-        const ab = new ArrayBuffer(byteString.length);
-        const ia = new Uint8Array(ab);
-        for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
-        formData.append('file', new Blob([ab], { type: mimeString }), fileName);
-      } else {
-        formData.append('file', new Blob([base64], { type: 'text/csv' }), fileName);
-      }
+  setToday(new Date().toLocaleDateString('en-US', {
+    year: 'numeric', month: 'short', day: 'numeric',
+  }));
+
+  if (!topic) return;
+
+  const formData = new FormData();
+  formData.append('topic', topic);
+  if (base64 && fileName) {
+    if (base64.startsWith('data:')) {
+      const byteString = atob(base64.split(',')[1]);
+      const mimeString = base64.split(',')[0].split(':')[1].split(';')[0];
+      const ab = new ArrayBuffer(byteString.length);
+      const ia = new Uint8Array(ab);
+      for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
+      formData.append('file', new Blob([ab], { type: mimeString }), fileName);
+    } else {
+      formData.append('file', new Blob([base64], { type: 'text/csv' }), fileName);
     }
+  }
 
-    fetch('http://127.0.0.1:8000/api/generate-report', {
-      method: 'POST',
-      body: formData,
+  fetch('http://127.0.0.1:8000/api/generate-report', {
+    method: 'POST',
+    body: formData,
+  })
+    .then(res => {
+      if (!res.ok) throw new Error('서버 오류');
+      return res.json();
     })
-      .then(res => { if (!res.ok) throw new Error('서버 오류'); return res.json(); })
-      .then(data => {
-        setReportTitle(data.title);
-        setReportContent(data.content);
-        setAllSources(data.sources.map((src,i) => ({
-          id: i+1, title: `출처 ${i+1}`, summary: src
-        })));
-        setSelectedSources([1,2,3]);
-      })
-      .catch(err => console.error('보고서 생성 실패:', err));
-  }, [topic, base64, fileName]);
+    .then(data => {
+      // API에서 제목이 오면 덮어씌움
+      if (data.title) setReportTitle(data.title);
+      setReportContent(data.content);
+
+    })
+    .catch(err => console.error('보고서 생성 실패:', err));
+}, [topic, base64, fileName]);
+
 
   const toggleSidebar = () => setIsSidebarOpen(prev => !prev);
   const handleImageUpload = e => {
@@ -86,17 +84,8 @@ const Edit3 = () => {
     reader.onload = () => setImageUrl(reader.result);
     reader.readAsDataURL(file);
   };
-  const handleSourceChange = id => setSelectedSources(prev =>
-    prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]
-  );
-  const resetSources = () => {
-    const reordered = allSources.filter(s => selectedSources.includes(s.id));
-    setVisibleCount(5);
-    setAllSources(prev => [
-      ...reordered,
-      ...prev.filter(s => !selectedSources.includes(s.id))
-    ]);
-  };
+
+
 
   return (
     <div className="editor-container" style={{ paddingRight: sidebarWidth + 20 }}>
@@ -197,10 +186,7 @@ const Edit3 = () => {
         className="sidebar"
         style={{ width: sidebarWidth }}
       >
-        {isChatMode ? (
-          <AiChat setReportContent={setReportContent} onExit={() => setIsChatMode(false)} />
-        ) : (
-          <>
+        
             <h3>이미지 추가하기</h3>
             <input
               id="file-upload" type="file" accept="image/*"
@@ -209,43 +195,9 @@ const Edit3 = () => {
             />
             <label htmlFor="file-upload" className="file-button">파일 선택</label>
 
-            <div style={{ background: 'white', padding: 16, borderRadius: 8, marginTop: 30 }}>
-              <label style={{ fontWeight: 600, display: 'block', marginBottom: 8 }}>출처 선택</label>
-              <select style={{ padding: '10px 16px', width: '100%', borderRadius: 8, border: '1px solid #EAEEF4', background: '#F6FAFD', marginBottom: 16 }}>
-                <option>출처 없음</option>
-                <option>웹 기사</option>
-                <option>논문</option>
-                <option>기타</option>
-              </select>
-              <hr style={{ margin: '12px 0' }} />
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600, fontSize: 14, color: '#092C4C', marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid #EAEEF4' }}>
-                <span style={{ width: '25%' }}>위치</span>
-                <span style={{ width: '35%' }}>제목</span>
-                <span style={{ width: '40%' }}>요약</span>
-              </div>
-              <div style={{ maxHeight: isSidebarOpen ? 300 : 150, overflowY: 'auto' }}>
-                {allSources.slice(0, visibleCount).map(src => (
-                  <div key={src.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', fontSize: 12, padding: '8px 0', borderBottom: '1px solid #F0F0F0' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', width: '25%' }}>
-                      <input type="checkbox" checked={selectedSources.includes(src.id)} onChange={() => handleSourceChange(src.id)} />
-                      <span style={{ marginLeft: 8, fontWeight: 500 }}>{`위치 ${src.id}`}</span>
-                    </div>
-                    <div style={{ fontWeight: 600, width: '35%' }}>{src.title}</div>
-                    <div style={{ fontWeight: 300, width: '40%' }}>{src.summary}</div>
-                  </div>
-                ))}
-              </div>
-              {visibleCount < allSources.length && (
-                <button className="btn" style={{ background: 'transparent', color: '#514EF3', marginTop: 8 }} onClick={() => setVisibleCount(allSources.length)}>
-                  View more
-                </button>
-              )}
-              <button className="btn" style={{ width: '100%', marginTop: 12 }} onClick={resetSources}>
-                출처 재선택
-              </button>
-            </div>
-          </>
-        )}
+ 
+     
+   
       </aside>
 
       {/* 토글 버튼 */}
@@ -262,7 +214,7 @@ const Edit3 = () => {
         className="bottom-buttons"
         style={{ right: sidebarWidth + 70 }}
       >
-        <button className="btn" onClick={() => setIsChatMode(true)}>AI 대화수정하기</button>
+
         <button className="btn" onClick={() => {
             localStorage.setItem('edit_content', reportContent);
             navigate('/Result');

@@ -1,4 +1,3 @@
-// src/pages/Edit2.jsx
 import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../contexts/AuthContext';
@@ -10,6 +9,12 @@ const Edit2 = () => {
 
   const [customTitle, setCustomTitle] = useState('');
   const [today, setToday] = useState('');
+  const [recommendedTitles, setRecommendedTitles] = useState([
+    '두산, 9회말 짜릿한 끝내기! MVP는 정수빈',
+    'LG, 에이스 투수 활약으로 리그 선두 수성',
+    'SSG 타선 폭발! 키움 상대 10-1 대승'
+  ]);
+  const [selectedTitle, setSelectedTitle] = useState('');
 
   useEffect(() => {
     const storedSubject = localStorage.getItem('edit_subject');
@@ -23,18 +28,22 @@ const Edit2 = () => {
     }));
   }, []);
 
-  // “기사 작성 시작” 버튼 핸들러
   const handleStart = () => {
-    const base64 = localStorage.getItem('edit_file');        // dataURL 또는 CSV 텍스트
-    const fileName = localStorage.getItem('edit_fileName');  // 파일명
+    const base64 = localStorage.getItem('edit_file');        // dataURL or CSV text
+    const fileName = localStorage.getItem('edit_fileName');  // file name
 
     navigate('/edit3', {
       state: {
-        topic: customTitle,
+        topic: selectedTitle || customTitle,
         base64,
         fileName,
       }
     });
+  };
+
+  const handleSelectTitle = (title) => {
+    setSelectedTitle(title);
+
   };
 
   return (
@@ -48,7 +57,7 @@ const Edit2 = () => {
       {/* User Info */}
       <div className="edit-userinfo">
         <div className="edit-userinfo-inner">
-          <div className="edit-avatar"/>
+          <div className="edit-avatar" />
           <div>
             <div className="edit-department">{userInfo?.department || '부서없음'}</div>
             <div className="edit-username">{userInfo ? `${userInfo.firstName} ${userInfo.lastName}` : '이름없음'}</div>
@@ -58,43 +67,44 @@ const Edit2 = () => {
 
       {/* Form */}
       <div className="edit-form">
+        {/* 요청사항 */}
         <div className="form-group">
-          <label>기사 제목 (수정 가능)</label>
+          <label>요청사항</label>
           <input
             value={customTitle}
             onChange={(e) => setCustomTitle(e.target.value)}
+            placeholder="기사 제목을 직접 입력하거나 추천 제목을 클릭해 주세요."
           />
         </div>
 
-        <div className="form-group">
-          <label>참고 AI/소스 선택</label>
-          <select>
-            <option>ChatGPT-4.0</option>
-            <option>Bing 스포츠</option>
-            <option>naver 스포츠AI</option>
-            <option>daum 뉴스AI</option>
-          </select>
-        </div>
-
+        {/* 작성 날짜 */}
         <div className="form-group">
           <label>기사 작성 날짜</label>
           <div className="readonly-input">{today}</div>
         </div>
 
+        {/* 제목 추천 */}
         <div className="form-group">
-          <label>특별 요청사항</label>
-          <textarea
-            rows={4}
-            placeholder="예: 팀명과 선수 이름을 정확하게 표기해 주세요. 기사 스타일은 스포츠 신문처럼 써주세요."
-          />
+          <label>제목 추천</label>
+          <div className="title-recommendations">
+            {recommendedTitles.map((title, idx) => (
+              <div
+                key={idx}
+                className={`title-item ${selectedTitle === title ? 'selected' : ''}`}
+                onClick={() => handleSelectTitle(title)}
+              >
+                {title}
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
 
-      {/* Actions */}
-      <div className="edit-actions">
-        <button className="btn-primary" onClick={handleStart}>
-          기사 작성 시작
-        </button>
+        {/* 버튼 */}
+        <div className="edit-actions">
+          <button className="btn-primary" onClick={handleStart}>
+            기사 작성 시작
+          </button>
+        </div>
       </div>
     </div>
   );

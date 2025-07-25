@@ -13,6 +13,79 @@
   min-height: 100vh;
   flex: 1;
 }
+
+.file-preview img {
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  max-width: 100%;
+  height: auto;
+}
+
+
+.csv-toggle-btn {
+  background: none;
+  border: none;
+  color: #007bff;
+  cursor: pointer;
+  font-size: 0.85rem;
+  margin-top: 4px;
+}
+.csv-toggle-btn:hover {
+  text-decoration: underline;
+}
+
+.csv-toggle-btn {
+  margin-top: 8px;
+  padding: 8px 16px;
+  font-size: 1rem;
+  font-weight: bold;
+  border: 2px solid #007bff;
+  border-radius: 6px;
+  background-color: #ffffff;
+  color: #007bff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.csv-toggle-btn:hover {
+  background-color: #007bff;
+  color: #fff;
+}
+
+.title-recommendations {
+  margin-top: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.title-item {
+  background-color: #f4f8fc;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  border: 1px solid transparent;
+}
+
+.title-item:hover {
+  background-color: #e0efff;
+}
+
+.title-item.selected {
+  background-color: #d0e8ff;
+  border-color: #007bff;
+  font-weight: bold;
+}
+
+
+.csv-preview td {
+  padding: 4px 8px;
+  border: 1px solid #ccc;
+  font-size: 0.85rem;
+}
+
+
 .calendar-card,
 .teams-card,
 .articles-card {
@@ -163,6 +236,34 @@
 /* ==========================================
    Edit Form Styles (Edit.jsx, Edit2.jsx, Edit3.jsx)
    ========================================== */
+
+
+.title-recommendations {
+  margin-top: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.title-item {
+  background-color: #f5f8fc;
+  border: 1px solid #d0e4f5;
+  border-radius: 6px;
+  padding: 10px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.title-item:hover {
+  background-color: #e0f0ff;
+}
+
+.title-item.selected {
+  background-color: #d0e8ff;
+  border-color: #007bff;
+  font-weight: bold;
+}
+
 .edit-container {
   margin-top: 60px;
   position: relative;

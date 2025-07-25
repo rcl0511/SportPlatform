@@ -1,50 +1,50 @@
 :root {
-  --sidebar-min: 15rem;
-  --sidebar-max: 25rem;
-  --toggle-width: clamp(2rem, 4vw, 3rem);
-  --toggle-height: clamp(4rem, 8vw, 6rem);
-  --sidebar-top: clamp(4rem, 10vh, 6rem);
-  --sidebar-transition: 0.3s ease;
+  --sidebar-width: 300px;
+  --toggle-width: 32px;
+  --toggle-height: 80px;
+  --sidebar-top: 70px;
+  --sidebar-padding: 20px;
 }
 
+/* ─────────────── 사이드바 ─────────────── */
 .rightbar {
   position: fixed;
   top: var(--sidebar-top);
   right: 0;
-  bottom: 0;
+  height: calc(100vh - 90px);
   width: 0;
   overflow-y: auto;
-  background: rgba(222,240,255,0.9);
-  border-left: none;
+  background: #EEF6FB;
+  box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
   padding: 0;
-  transition: width var(--sidebar-transition), padding var(--sidebar-transition);
-  z-index: 1000;
+  transition: width 0.3s ease, padding 0.3s ease;
+  z-index: 10;
 }
 
 .rightbar--open {
-  width: clamp(var(--sidebar-min), 20vw, var(--sidebar-max));
+  width: var(--sidebar-width);
+  padding: var(--sidebar-padding);
   border-left: 1px solid #EAEEF4;
-  padding: clamp(1rem, 3vw, 2rem);
 }
 
+/* ─────────────── 토글 버튼 ─────────────── */
 .rightbar__toggle {
   position: fixed;
   top: 50%;
-  right: 0;
   transform: translateY(-50%);
   width: var(--toggle-width);
   height: var(--toggle-height);
   background: #D0E6F8;
-  border: none;
-  border-top-left-radius: 0.5rem;
-  border-bottom-left-radius: 0.5rem;
   display: flex;
-  align-items: center;
   justify-content: center;
+  align-items: center;
   cursor: pointer;
-  z-index: 1001;
-  transition: right var(--sidebar-transition);
+  border-top-left-radius: 8px;
+  border-bottom-left-radius: 8px;
+  z-index: 20;
+  transition: right 0.3s ease;
 }
+
 
 /* 토글 위치 조정: 사이드바 열릴 때 버튼 이동 */
 .rightbar--open + .rightbar__toggle {
