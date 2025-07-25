@@ -9,11 +9,7 @@ const Edit2 = () => {
 
   const [customTitle, setCustomTitle] = useState('');
   const [today, setToday] = useState('');
-  const [recommendedTitles, setRecommendedTitles] = useState([
-    '두산, 9회말 짜릿한 끝내기! MVP는 정수빈',
-    'LG, 에이스 투수 활약으로 리그 선두 수성',
-    'SSG 타선 폭발! 키움 상대 10-1 대승'
-  ]);
+
   const [selectedTitle, setSelectedTitle] = useState('');
 
   useEffect(() => {
