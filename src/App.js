@@ -47,12 +47,13 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route element={<MainLayout />}>
-            <Route path="/" element={<Dashboard />} />
+            <Route path="/" element={<Platform />} />
             <Route path="login" element={<Login />} />
             <Route path="file" element={<File />} />
             <Route path="register" element={<Register />} />
             <Route path="edit" element={<Edit />} />
-            <Route path="platform" element={<Platform />} />
+
+            <Route path="dashboard" element={<Dashboard />} />
             <Route path="/platform/article/:id" element={<ArticleDetail />} />
             <Route path="chat" element={<Chat />} />
             <Route path="edit2" element={<Edit2 />} />
