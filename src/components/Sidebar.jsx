@@ -15,12 +15,12 @@ const Sidebar = () => {
   const navigate = useNavigate();
 
   const icons = [
-    { icon: <MdWeb />, label: 'Platform', route: '/Platform' },
+    { icon: <MdWeb />, label: 'Platform', route: '/' },
     { icon: <MdEdit />, label: 'Edit', route: '/edit' },
     { icon: <MdInsertDriveFile />, label: 'File', route: '/file' },
     { icon: <MdNotifications />, label: 'Alarm', route: '/alarm' },
     { icon: <MdSettings />, label: 'Settings', route: '/settings' },
-    { icon: <MdDashboard />, label: 'Dashboard', route: '/' },
+    { icon: <MdDashboard />, label: 'Dashboard', route: '/dashboard' },
   ];
 
   return (
