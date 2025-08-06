@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import  { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Rightbar from '../components/Rightbar';
 import '../styles/Edit.css';
@@ -12,20 +12,14 @@ const Edit = () => {
   const navigate = useNavigate();
 const [expandedCsvs, setExpandedCsvs] = useState({});
   const [subject, setSubject] = useState('');
-  const [inputValue, setInputValue] = useState('');
-  const [tags, setTags] = useState([]);
+
+  const [tags] = useState([]);
 
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [previewImages, setPreviewImages] = useState([]);
   const [previewCsvs, setPreviewCsvs] = useState([]);
 
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && inputValue.trim()) {
-      e.preventDefault();
-      setTags([...tags, inputValue.trim()]);
-      setInputValue('');
-    }
-  };
+
 
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
@@ -77,9 +71,7 @@ const [expandedCsvs, setExpandedCsvs] = useState({});
 };
 
 
-  const handleRemoveTag = (tagToRemove) => {
-    setTags(tags.filter((tag) => tag !== tagToRemove));
-  };
+
 
   const handleNextStep = () => {
     if (!subject.trim()) {
