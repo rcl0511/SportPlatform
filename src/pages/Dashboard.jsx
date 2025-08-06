@@ -1,16 +1,19 @@
 // src/pages/Dashboard.jsx
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import '../styles/Dashboard.css';
 import Rightbar from '../components/Rightbar';
 import { useNavigate } from 'react-router-dom';
+import ViewsChart from '../components/ViewsChart';
 
 const Dashboard = () => {
   const [reports, setReports] = useState([]);
   const [recentGames, setRecentGames] = useState([]);
   const [selectedDate, setSelectedDate] = useState(null);
+  const [filter, setFilter] = useState('7days');
+
   const navigate = useNavigate();
 
   const baseballTeams = [
@@ -31,6 +34,31 @@ const Dashboard = () => {
     return team ? team.logo : '';
   };
 
+  // ✅ 조회수 데이터 집계
+  const chartData = useMemo(() => {
+    const viewMap = {};
+    reports.forEach(article => {
+      const date = article.date;
+      if (!viewMap[date]) viewMap[date] = 0;
+      viewMap[date] += article.views || 0;
+    });
+    return Object.entries(viewMap).map(([date, views]) => ({ date, views }));
+  }, [reports]);
+
+  // ✅ 필터링된 데이터 (최근 7일, 월별)
+  const filteredData = useMemo(() => {
+    const now = new Date();
+    if (filter === '7days') {
+      const sevenDaysAgo = new Date(now);
+      sevenDaysAgo.setDate(now.getDate() - 6);
+      return chartData.filter(d => new Date(d.date) >= sevenDaysAgo);
+    } else if (filter === 'month') {
+      const currentMonth = now.toISOString().slice(0, 7);
+      return chartData.filter(d => d.date.startsWith(currentMonth));
+    }
+    return chartData;
+  }, [chartData, filter]);
+
   useEffect(() => {
     const stored = JSON.parse(localStorage.getItem('saved_files')) || [];
     const withDates = stored.map(r => ({
@@ -38,8 +66,8 @@ const Dashboard = () => {
       date: r.date
         ? r.date
         : (r.createdAt || r.timestamp)
-          ? new Date(r.createdAt || r.timestamp).toISOString().slice(0, 10)
-          : new Date().toISOString().slice(0, 10)
+        ? new Date(r.createdAt || r.timestamp).toISOString().slice(0, 10)
+        : new Date().toISOString().slice(0, 10)
     }));
     setReports(withDates);
 
@@ -86,6 +114,7 @@ const Dashboard = () => {
     <div className="dashboard-container">
       <div className="dashboard-main">
         <h2>⚾ 오늘의 야구 뉴스 & 경기 일정</h2>
+
         <div className="calendar-card">
           <Calendar
             value={selectedDate}
@@ -95,6 +124,7 @@ const Dashboard = () => {
             tileContent={tileContent}
             tileClassName={tileClassName}
           />
+
           {selectedReports.length > 0 && (
             <div className="date-articles-popup">
               <h3>{selectedDateStr} 작성된 기사</h3>
@@ -133,9 +163,10 @@ const Dashboard = () => {
         </div>
       </div>
 
+      {/* ✅ 오른쪽 사이드바 */}
       <Rightbar>
         <div className="articles-card">
-          <h3>📰 최신 기사</h3>
+          <h3>최신 기사</h3>
           {reports.slice(0, 3).map((article, idx) => (
             <div
               key={idx}
@@ -152,23 +183,7 @@ const Dashboard = () => {
           ))}
         </div>
 
-        <div className="games-card">
-          <h3>⚾ 최근 경기 결과</h3>
-          {recentGames.map((game, idx) => (
-            <div key={idx} className="game">
-              <div className="game-teams">
-                <img src={getLogo(game.home)} alt={game.home} className="team-logo-sm" />
-                <span className="team-name">{game.home}</span>
-                <span className="score">{game.homeScore}</span>
-                <span className="vs">:</span>
-                <span className="score">{game.awayScore}</span>
-                <span className="team-name">{game.away}</span>
-                <img src={getLogo(game.away)} alt={game.away} className="team-logo-sm" />
-              </div>
-              <div className="game-date">{game.date}</div>
-            </div>
-          ))}
-        </div>
+        <ViewsChart data={filteredData} filter={filter} setFilter={setFilter} />
       </Rightbar>
     </div>
   );

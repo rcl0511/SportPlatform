@@ -1,0 +1,230 @@
+/* styles/Platform.css */
+
+.platform-wrapper {
+  font-family: 'Mulish', sans-serif;
+  padding: 20px;
+  background-color: #f7f9fc;
+  min-height: 100vh;
+}
+
+/* --- 상단 경기 슬라이드 --- */
+.top-schedule {
+  margin-bottom: 40px;
+}
+
+.schedule-tabs {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.tab {
+  padding: 8px 16px;
+  border: none;
+  background: #e3eaf2;
+  color: #333;
+  border-radius: 20px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.tab.active {
+  background: #3283fd;
+  color: white;
+}
+
+.schedule-slider {
+  display: flex;
+  align-items: center;
+}
+
+.slide-button {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #333;
+}
+
+.slide-window {
+  overflow: hidden;
+  flex: 1;
+}
+
+.slide-track {
+  display: flex;
+  gap: 16px;
+  padding: 0 16px;
+}
+
+.match-card {
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  width: 200px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.match-status {
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.match-league {
+  font-size: 12px;
+  color: #888;
+  margin-bottom: 8px;
+}
+
+.team-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.team-row img {
+  width: 24px;
+  height: 24px;
+}
+
+/* --- 하단 뉴스 섹션 --- */
+.news-section {
+  padding: 20px 0;
+}
+
+.news-section h2 {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+.highlight {
+  color: #3283fd;
+}
+
+.news-main-link {
+  display: block;
+  margin-bottom: 32px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.news-main {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+.news-main-img {
+  width: 200px;
+  height: 150px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.news-main-title {
+  font-size: 20px;
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+
+.news-main-reporter,
+.news-main-views {
+  font-size: 14px;
+  color: #555;
+}
+
+.news-sub-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.news-sub-item {
+  display: flex;
+  gap: 12px;
+  text-decoration: none;
+  color: inherit;
+  background: white;
+  padding: 12px;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+
+.news-thumb {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+.news-sub-title {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.news-sub-reporter,
+.news-sub-views {
+  font-size: 13px;
+  color: #666;
+}
+
+/* --- 태그 (자동 생성 예정) --- */
+.tag-list {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.tag {
+  background: #deeffb;
+  color: #1f2937;
+  font-size: 13px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.tag:hover {
+  background: #c7e6ff;
+}
+/* --- 메인 기사 --- */
+.news-main {
+  display: flex;
+  flex-direction: row;
+  gap: 20px;
+  padding: 20px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  align-items: center;
+  transition: transform 0.2s ease;
+}
+
+.news-main:hover {
+  transform: translateY(-4px);
+}
+
+.news-main-img {
+  width: 240px;
+  height: 160px;
+  object-fit: cover;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.news-main-title {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: #1f2937;
+}
+
+.news-main-reporter,
+.news-main-views {
+  font-size: 14px;
+  color: #555;
+}

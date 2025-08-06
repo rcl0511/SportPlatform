@@ -118,23 +118,7 @@ const [expandedCsvs, setExpandedCsvs] = useState({});
             />
           </div>
 
-          <div className="form-group">
-            <label>종목/카테고리 설정</label>
-            <input
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="예: 타점, 투수, 홈런"
-            />
-            <div className="tags-container">
-              {tags.map((tag, idx) => (
-                <div key={idx} className="tag">
-                  {tag}
-                  <span className="tag-remove" onClick={() => handleRemoveTag(tag)}>×</span>
-                </div>
-              ))}
-            </div>
-          </div>
+
 
           <div className="form-group">
             <label>경기 데이터/자료 첨부 (필수)</label>

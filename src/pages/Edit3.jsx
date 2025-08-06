@@ -1,4 +1,4 @@
-import  { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AuthContext } from '../contexts/AuthContext.js';
 
@@ -34,46 +34,46 @@ const Edit3 = () => {
   useEffect(() => {
     if (topic) setReportTitle(topic);  // 넘겨받은 제목을 우선 적용
 
-  const savedContent = localStorage.getItem('edit_content');
-  if (savedContent) setReportContent(savedContent);
+    const savedContent = localStorage.getItem('edit_content');
+    if (savedContent) setReportContent(savedContent);
 
-  setToday(new Date().toLocaleDateString('en-US', {
-    year: 'numeric', month: 'short', day: 'numeric',
-  }));
+    setToday(new Date().toLocaleDateString('en-US', {
+      year: 'numeric', month: 'short', day: 'numeric',
+    }));
 
-  if (!topic) return;
+    if (!topic) return;
 
-  const formData = new FormData();
-  formData.append('topic', topic);
-  if (base64 && fileName) {
-    if (base64.startsWith('data:')) {
-      const byteString = atob(base64.split(',')[1]);
-      const mimeString = base64.split(',')[0].split(':')[1].split(';')[0];
-      const ab = new ArrayBuffer(byteString.length);
-      const ia = new Uint8Array(ab);
-      for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
-      formData.append('file', new Blob([ab], { type: mimeString }), fileName);
-    } else {
-      formData.append('file', new Blob([base64], { type: 'text/csv' }), fileName);
+    const formData = new FormData();
+    formData.append('topic', topic);
+    if (base64 && fileName) {
+      if (base64.startsWith('data:')) {
+        const byteString = atob(base64.split(',')[1]);
+        const mimeString = base64.split(',')[0].split(':')[1].split(';')[0];
+        const ab = new ArrayBuffer(byteString.length);
+        const ia = new Uint8Array(ab);
+        for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
+        formData.append('file', new Blob([ab], { type: mimeString }), fileName);
+      } else {
+        formData.append('file', new Blob([base64], { type: 'text/csv' }), fileName);
+      }
     }
-  }
 
-  fetch('http://127.0.0.1:8000/api/generate-report', {
-    method: 'POST',
-    body: formData,
-  })
-    .then(res => {
-      if (!res.ok) throw new Error('서버 오류');
-      return res.json();
+    fetch('http://127.0.0.1:8000/api/generate-report', {
+      method: 'POST',
+      body: formData,
     })
-    .then(data => {
-      // API에서 제목이 오면 덮어씌움
-      if (data.title) setReportTitle(data.title);
-      setReportContent(data.content);
+      .then(res => {
+        if (!res.ok) throw new Error('서버 오류');
+        return res.json();
+      })
+      .then(data => {
+        // API에서 제목이 오면 덮어씌움
+        if (data.title) setReportTitle(data.title);
+        setReportContent(data.content);
 
-    })
-    .catch(err => console.error('보고서 생성 실패:', err));
-}, [topic, base64, fileName]);
+      })
+      .catch(err => console.error('보고서 생성 실패:', err));
+  }, [topic, base64, fileName]);
 
 
   const toggleSidebar = () => setIsSidebarOpen(prev => !prev);
@@ -186,18 +186,18 @@ const Edit3 = () => {
         className="sidebar"
         style={{ width: sidebarWidth }}
       >
-        
-            <h3>이미지 추가하기</h3>
-            <input
-              id="file-upload" type="file" accept="image/*"
-              style={{ display: 'none' }}
-              onChange={handleImageUpload}
-            />
-            <label htmlFor="file-upload" className="file-button">파일 선택</label>
 
- 
-     
-   
+        <h3>이미지 추가하기</h3>
+        <input
+          id="file-upload" type="file" accept="image/*"
+          style={{ display: 'none' }}
+          onChange={handleImageUpload}
+        />
+        <label htmlFor="file-upload" className="file-button">파일 선택</label>
+
+
+
+
       </aside>
 
       {/* 토글 버튼 */}
@@ -216,9 +216,19 @@ const Edit3 = () => {
       >
 
         <button className="btn" onClick={() => {
-            localStorage.setItem('edit_content', reportContent);
-            navigate('/Result');
-          }}>
+          localStorage.setItem('edit_content', reportContent);
+          localStorage.setItem('edit_subject', reportTitle);
+          if (imageUrl) {
+            localStorage.setItem('edit_image', imageUrl);
+            localStorage.setItem('edit_image_position', imagePosition);
+            localStorage.setItem('edit_image_width', imageWidth.toString());
+            localStorage.setItem('edit_image_align', imageAlign);
+            localStorage.setItem('edit_image_marginTop', imageMarginTop.toString());
+            localStorage.setItem('edit_image_marginLeft', imageMarginLeft.toString());
+          }
+          // 이동
+          navigate('/Result');
+        }}>
           완료하기
         </button>
       </div>

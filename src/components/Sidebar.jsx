@@ -8,17 +8,19 @@ import {
   MdInsertDriveFile,
   MdNotifications,
   MdSettings,
+  MdWeb,
 } from 'react-icons/md';
 
 const Sidebar = () => {
   const navigate = useNavigate();
 
   const icons = [
-    { icon: <MdDashboard />, label: 'Dashboard', route: '/' },
+    { icon: <MdWeb />, label: 'Platform', route: '/Platform' },
     { icon: <MdEdit />, label: 'Edit', route: '/edit' },
     { icon: <MdInsertDriveFile />, label: 'File', route: '/file' },
     { icon: <MdNotifications />, label: 'Alarm', route: '/alarm' },
     { icon: <MdSettings />, label: 'Settings', route: '/settings' },
+    { icon: <MdDashboard />, label: 'Dashboard', route: '/' },
   ];
 
   return (
