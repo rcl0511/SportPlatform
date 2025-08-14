@@ -39,7 +39,7 @@ export default function Platform() {
 
   useEffect(() => {
     const stored = JSON.parse(localStorage.getItem('saved_files') || '[]');
-    setSavedArticles(stored);
+    setSavedArticles(stored.length ? stored : dummyArticles);
 
     // 필요 시 로컬스토리지에서 기록/이슈도 불러오기 (키만 정하면 됨)
     const storedRecords = JSON.parse(localStorage.getItem('recent_records') || '[]');
