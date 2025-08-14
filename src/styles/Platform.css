@@ -228,3 +228,143 @@
   font-size: 14px;
   color: #555;
 }
+
+/* ===== 레이아웃 ===== */
+.content-grid {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+  margin-top: 50px;
+}
+
+.main-column {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.right-column {
+  flex: 0 0 340px; /* 우측 폭 */
+}
+
+.right-sticky {
+  position: sticky;
+  top: 96px; /* 헤더 높이에 맞춰 고정 */
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ===== 우측 카드 공통 ===== */
+.right-card {
+  background: #ffffff;
+  border: 1px solid #e9ecef;
+  border-radius: 14px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.04);
+  padding: 14px 16px;
+}
+
+.right-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.right-card h3 {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.mini-link {
+  background: transparent;
+  border: none;
+  font-size: 12px;
+  color: #4a72ff;
+  cursor: pointer;
+  padding: 4px 6px;
+}
+.mini-link:hover { text-decoration: underline; }
+
+/* ===== 기록 리스트 ===== */
+.record-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+.record-item {
+  border: 1px dashed #e8edf7;
+  border-radius: 10px;
+  padding: 10px;
+  background: #f9fbff;
+}
+.record-title { font-weight: 600; margin-bottom: 4px; }
+.record-detail { font-size: 12px; color: #667085; }
+.record-tag {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 11px;
+  padding: 3px 8px;
+  background: #eef2ff;
+  color: #4a72ff;
+  border-radius: 999px;
+}
+
+/* ===== 토픽 리스트 ===== */
+.topic-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+.topic-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.topic-text { flex: 1; font-size: 14px; }
+.topic-heat {
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #fff3e8;
+  color: #ff8a00;
+  border: 1px solid #ffd9b3;
+}
+
+/* ===== 저장함 ===== */
+.saved-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.saved-item .saved-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  color: #111827;
+  font-size: 14px;
+}
+.saved-item .saved-link:hover { text-decoration: underline; }
+.saved-empty {
+  font-size: 13px;
+  color: #6b7280;
+}
+.dot {
+  width: 6px;
+  height: 6px;
+  background: #4a72ff;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+/* ===== 반응형 ===== */
+@media (max-width: 1120px) {
+  .right-column { display: none; } /* 좁은 화면에서는 자동 숨김 */
+}

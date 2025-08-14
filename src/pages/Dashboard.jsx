@@ -1,18 +1,20 @@
 // src/pages/Dashboard.jsx
-
 import React, { useState, useEffect, useMemo } from 'react';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import '../styles/Dashboard.css';
 import Rightbar from '../components/Rightbar';
 import { useNavigate } from 'react-router-dom';
-import ViewsChart from '../components/ViewsChart';
+import ViewsChart from '../components/ViewsChart'; // ✅ 추가
 
 const Dashboard = () => {
   const [reports, setReports] = useState([]);
   const [recentGames, setRecentGames] = useState([]);
   const [selectedDate, setSelectedDate] = useState(null);
+
+  // ✅ 차트용 상태
   const [filter, setFilter] = useState('7days');
+  const [chartData, setChartData] = useState([]);
 
   const navigate = useNavigate();
 
@@ -29,35 +31,11 @@ const Dashboard = () => {
     { name: 'KT WIZ', logo: '/assets/KT.png' },
   ];
 
+  // (선택) 안 쓰면 워닝 나니 필요 없으면 지워도 됨
   const getLogo = teamName => {
     const team = baseballTeams.find(t => t.name === teamName);
     return team ? team.logo : '';
   };
-
-  // ✅ 조회수 데이터 집계
-  const chartData = useMemo(() => {
-    const viewMap = {};
-    reports.forEach(article => {
-      const date = article.date;
-      if (!viewMap[date]) viewMap[date] = 0;
-      viewMap[date] += article.views || 0;
-    });
-    return Object.entries(viewMap).map(([date, views]) => ({ date, views }));
-  }, [reports]);
-
-  // ✅ 필터링된 데이터 (최근 7일, 월별)
-  const filteredData = useMemo(() => {
-    const now = new Date();
-    if (filter === '7days') {
-      const sevenDaysAgo = new Date(now);
-      sevenDaysAgo.setDate(now.getDate() - 6);
-      return chartData.filter(d => new Date(d.date) >= sevenDaysAgo);
-    } else if (filter === 'month') {
-      const currentMonth = now.toISOString().slice(0, 7);
-      return chartData.filter(d => d.date.startsWith(currentMonth));
-    }
-    return chartData;
-  }, [chartData, filter]);
 
   useEffect(() => {
     const stored = JSON.parse(localStorage.getItem('saved_files')) || [];
@@ -66,8 +44,8 @@ const Dashboard = () => {
       date: r.date
         ? r.date
         : (r.createdAt || r.timestamp)
-        ? new Date(r.createdAt || r.timestamp).toISOString().slice(0, 10)
-        : new Date().toISOString().slice(0, 10)
+          ? new Date(r.createdAt || r.timestamp).toISOString().slice(0, 10)
+          : new Date().toISOString().slice(0, 10),
     }));
     setReports(withDates);
 
@@ -79,9 +57,57 @@ const Dashboard = () => {
     setRecentGames(storedGames);
   }, []);
 
-  const handleDateClick = date => {
-    setSelectedDate(date);
+  // ✅ reports → 차트 데이터로 변환
+  const buildChartData = (list, f) => {
+    // views 필드가 있으면 합계, 없으면 "기사 수"로 대체
+    const parse = (d) => (typeof d === 'string' ? new Date(d) : d);
+    const toYMD = (d) => d.toISOString().slice(0, 10);
+    const toYM  = (d) => d.toISOString().slice(0, 7);
+
+    if (f === '7days') {
+      // 최근 7일
+      const today = new Date();
+      const days = [...Array(7)].map((_, i) => {
+        const d = new Date(today);
+        d.setDate(today.getDate() - (6 - i));
+        const key = toYMD(d);
+        const dayItems = list.filter(r => toYMD(parse(r.date)) === key);
+        const views = dayItems.reduce((sum, r) => sum + (r.views || 1), 0);
+        return { date: key, views };
+      });
+      return days;
+    }
+
+    if (f === 'month') {
+      // 최근 6개월 월별
+      const today = new Date();
+      const months = [...Array(6)].map((_, i) => {
+        const d = new Date(today.getFullYear(), today.getMonth() - (5 - i), 1);
+        const key = toYM(d);
+        const monthItems = list.filter(r => toYM(parse(r.date)) === key);
+        const views = monthItems.reduce((sum, r) => sum + (r.views || 1), 0);
+        return { date: key, views };
+      });
+      return months;
+    }
+
+    // all: 전체 기간 일자별 합
+    const byDay = {};
+    list.forEach(r => {
+      const key = toYMD(parse(r.date));
+      byDay[key] = (byDay[key] || 0) + (r.views || 1);
+    });
+    return Object.entries(byDay)
+      .sort(([a], [b]) => (a > b ? 1 : -1))
+      .map(([date, views]) => ({ date, views }));
   };
+
+  // reports/필터 변경시 차트 갱신
+  useEffect(() => {
+    setChartData(buildChartData(reports, filter));
+  }, [reports, filter]);
+
+  const handleDateClick = date => setSelectedDate(date);
 
   const tileContent = ({ date, view }) => {
     if (view !== 'month') return null;
@@ -114,7 +140,6 @@ const Dashboard = () => {
     <div className="dashboard-container">
       <div className="dashboard-main">
         <h2>⚾ 오늘의 야구 뉴스 & 경기 일정</h2>
-
         <div className="calendar-card">
           <Calendar
             value={selectedDate}
@@ -124,7 +149,6 @@ const Dashboard = () => {
             tileContent={tileContent}
             tileClassName={tileClassName}
           />
-
           {selectedReports.length > 0 && (
             <div className="date-articles-popup">
               <h3>{selectedDateStr} 작성된 기사</h3>
@@ -141,7 +165,7 @@ const Dashboard = () => {
                   >
                     <div className="date-article-title">{a.title}</div>
                     <div className="date-article-snippet">
-                      {a.content.slice(0, 60).trim()}…
+                      {(a.content || '').slice(0, 60).trim()}…
                     </div>
                   </div>
                 ))}
@@ -163,10 +187,10 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* ✅ 오른쪽 사이드바 */}
+      {/* ✅ Rightbar에 ViewsChart 추가 */}
       <Rightbar>
         <div className="articles-card">
-          <h3>최신 기사</h3>
+          <h3>📰 최신 기사</h3>
           {reports.slice(0, 3).map((article, idx) => (
             <div
               key={idx}
@@ -183,7 +207,22 @@ const Dashboard = () => {
           ))}
         </div>
 
-        <ViewsChart data={filteredData} filter={filter} setFilter={setFilter} />
+        {/* 조회수 라인차트 (recharts) */}
+        <ViewsChart data={chartData} filter={filter} setFilter={setFilter} />
+
+        {/* (선택) 최근 경기 결과 박스 */}
+        <div className="recent-games-card">
+          <h3>최근 경기 결과</h3>
+          <ul>
+            {recentGames.map((g, i) => (
+              <li key={`${g.date}-${i}`}>
+                <span className="rg-date">{g.date}</span>
+                <span className="rg-home">{g.home} {g.homeScore}</span>
+                <span className="rg-away">{g.awayScore} {g.away}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
       </Rightbar>
     </div>
   );

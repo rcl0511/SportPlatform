@@ -96,3 +96,21 @@
     height: var(--toggle-height);
   }
 }
+
+
+/* Rightbar 안쪽 컨텐츠 공통 */
+.rightbar-content { padding: 20px; background: #fff; height: 100%; overflow-y: auto; }
+.rightbar-content h3 { font-size: 1.1rem; margin-bottom: 14px; }
+
+.rightbar-list { list-style: none; margin: 0; padding: 0; }
+.rightbar-article { margin-bottom: 12px; }
+
+.rightbar-link { display: flex; align-items: center; gap: 10px; text-decoration: none; color: inherit; }
+.rightbar-link:hover .title { text-decoration: underline; }
+
+.rank { font-weight: 700; font-size: 1.1rem; color: #ff6a00; width: 22px; text-align: right; }
+
+.thumb { width: 64px; height: 44px; object-fit: cover; border-radius: 6px; }
+
+.info .title { font-size: 0.95rem; font-weight: 600; line-height: 1.2; }
+.info .meta { font-size: 0.8rem; color: #666; margin-top: 2px; }

@@ -4,7 +4,7 @@ import '../styles/Rightbar.css';
 
 const Rightbar = ({ children }) => {
   const [isOpen, setIsOpen] = useState(true);
-  const sidebarWidth = isOpen ? 600 : 0; // 원하는 너비
+  const sidebarWidth = isOpen ? 300 : 0; // 원하는 너비
   const toggleOffset = 40;
   return (
     <>

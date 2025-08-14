@@ -493,3 +493,94 @@
     gap: 8px;
   }
 }
+
+/* ===== 레이아웃: 메인 + 우측 사이드 ===== */
+.edit-layout {
+  display: grid;
+  grid-template-columns: 1fr 300px;  /* ✅ 열림: 메인 1fr, 우측 300px */
+  gap: 0;                             /* ✅ 요청대로 300 : 0 비율에서 간격 0 */
+  align-items: start;
+}
+
+/* 닫힘 상태: 우측 0px */
+.edit-layout.rb-collapsed {
+  grid-template-columns: 1fr 0px;
+}
+
+/* 사이드바 쉘: 부드럽게 접히는 애니메이션 */
+.rightbar-shell {
+  max-width: 300px;
+  overflow: hidden;
+  transition: max-width .25s ease;
+}
+.edit-layout.rb-collapsed .rightbar-shell {
+  max-width: 0;
+}
+
+/* 헤더 우측 버튼 정렬 */
+.edit-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.edit-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.rightbar-toggle {
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.rightbar-toggle:hover { background: #f9fafb; }
+
+/* ===== Rightbar 카드 (인기 제목) ===== */
+.rb-card {
+  background: #fff;
+  border: 1px solid #eef2f7;
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+.rb-card-header h4 {
+  margin: 0 0 6px 0;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.rb-hot-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+.rb-hot-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.rb-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ff5a5a; /* 포인트 */
+  display: inline-block;
+}
+.rb-hot-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+/* 반응형: 좁은 화면에서는 자동 접기 추천(선택) */
+@media (max-width: 1120px) {
+  .edit-layout { grid-template-columns: 1fr; }
+  .rightbar-shell { display: none; }
+}
