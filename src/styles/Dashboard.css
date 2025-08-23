@@ -1,32 +1,216 @@
-/* src/styles/Global.css */
+/* src/styles/Dashboard.css */
 
 /* ── 전체 레이아웃 ── */
 .dashboard-container {
   position: relative;
   display: flex;
+  gap: 0;
 }
 .dashboard-main {
-  padding: 24px;
+  padding: 28px;
   background: #F6FAFD;
   min-height: 100vh;
   flex: 1;
 }
 
-/* ── 카드 공통 ── */
+/* 헤더 */
+.dash-header {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 16px;
+  align-items: end;
+  margin-bottom: 18px;
+}
+.dash-header h2 {
+  margin: 0;
+  color: #0c2742;
+  letter-spacing: -0.2px;
+}
+.subtitle {
+  margin: 6px 0 0 0;
+  color: #6b86a0;
+  font-size: 14px;
+}
+
+/* 액션 영역 */
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #fff;
+  border: 1px solid #e3eaf2;
+  border-radius: 10px;
+  padding: 8px 10px;
+  min-width: 320px;
+  transition: box-shadow .15s ease, border-color .15s ease;
+}
+.search:focus-within {
+  border-color: #b8cbe0;
+  box-shadow: 0 4px 14px rgba(12,39,66,0.06);
+}
+.search input {
+  border: 0;
+  outline: none;
+  font-size: 14px;
+  width: 100%;
+  background: transparent;
+  color: #0c2742;
+}
+.quick-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+button.primary {
+  background: #4b7bff;
+  color: #fff;
+  border: 1px solid #4b7bff;
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform .06s ease, box-shadow .15s ease;
+}
+button.primary:hover {
+  box-shadow: 0 6px 16px rgba(75,123,255,0.3);
+  transform: translateY(-1px);
+}
+button.ghost {
+  background: #f3f7fb;
+  color: #305078;
+  border: 1px solid #dfe7f1;
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.dropdown {
+  position: relative;
+}
+.dropdown .menu {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  background: #fff;
+  border: 1px solid #e7eef6;
+  border-radius: 10px;
+  box-shadow: 0 10px 24px rgba(0,0,0,0.08);
+  min-width: 150px;
+  overflow: hidden;
+  z-index: 3;
+}
+.dropdown:hover .menu { display: block; }
+.dropdown .menu > div {
+  padding: 10px 12px;
+  cursor: pointer;
+  font-size: 14px;
+}
+.dropdown .menu > div:hover { background: #f6f9ff; }
+
+/* 카드 공통 */
 .calendar-card,
 .teams-card,
 .articles-card,
-.games-card {
+.games-card,
+.views-chart-card,
+.team-filter-card,
+.upcoming-card {
   background: white;
-  padding: 24px;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  margin-bottom: 30px;
+  padding: 22px;
+  border-radius: 14px;
+  box-shadow: 0 2px 10px rgba(10, 28, 58, 0.06);
+  margin-bottom: 26px;
   box-sizing: border-box;
-  overflow-x: hidden;
+  overflow: hidden;
+}
+.calendar-card h3,
+.teams-card h3,
+.views-chart-card h3,
+.team-filter-card h3,
+.upcoming-card h3 {
+  margin: 0 0 12px;
+  color: #0f3155;
+  font-size: 18px;
+  letter-spacing: -0.2px;
 }
 
-/* ── 캘린더 ── */
+/* KPI */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(160px, 1fr));
+  gap: 14px;
+  margin: 10px 0 18px;
+}
+.kpi-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
+  border: 1px solid #e6eef7;
+  border-radius: 14px;
+  padding: 14px 16px;
+  transition: transform .06s ease, box-shadow .2s ease;
+}
+.kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 18px rgba(12,39,66,0.08);
+}
+.kpi-icon {
+  width: 40px; height: 40px;
+  display: grid; place-items: center;
+  font-size: 20px;
+  background: #eef4ff;
+  color: #4b7bff;
+  border-radius: 10px;
+}
+.kpi-meta { display: grid; gap: 2px; }
+.kpi-label { font-size: 13px; color: #6a87a3; }
+.kpi-value { font-size: 20px; font-weight: 800; color: #0c2742; }
+
+/* 팀 필터 */
+.team-filter-card .filter-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 10px;
+}
+.team-filter-card .filter-actions { display: flex; gap: 6px; }
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.chip {
+  display: inline-flex; align-items: center; gap: 8px;
+  border: 1px solid #e1eaf4;
+  background: #f6faff;
+  color: #21405e;
+  border-radius: 999px;
+  padding: 6px 10px;
+  cursor: pointer;
+  transition: all .15s ease;
+}
+.chip.active {
+  background: #305078; color: #fff; border-color: #305078;
+}
+.chip img {
+  width: 22px; height: 22px; border-radius: 4px; background: #fff; border: 1px solid #eee;
+}
+.chip .star { margin-left: 2px; font-size: 14px; color: #b7c6d5; }
+.chip .star.on { color: #ffd057; }
+
+/* 2열 그리드 */
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 16px;
+}
+
+/* React-Calendar 세부 */
 .react-calendar {
   width: 100%;
   max-width: none;
@@ -34,252 +218,129 @@
 .react-calendar__navigation {
   display: flex;
   justify-content: center;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 .react-calendar__navigation button {
   color: #092C4C;
-  font-size: 18px;
-  font-weight: bold;
+  font-size: 16px;
+  font-weight: 700;
   background: none;
   border: none;
-  padding: 8px 12px;
+  padding: 6px 10px;
   cursor: pointer;
 }
 .react-calendar__month-view__weekdays {
   text-align: center;
-  font-weight: bold;
-  font-size: 14px;
+  font-weight: 700;
+  font-size: 13px;
   color: #7E92A2;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 .react-calendar__month-view__weekdays__weekday abbr {
-  padding: 12px 0;
+  padding: 10px 0;
 }
 .react-calendar__tile {
   padding: 8px !important;
-  height: auto !important;
-  min-height: 50px !important;
+  min-height: 56px !important;
   position: relative;
   box-sizing: border-box;
+  border-radius: 8px;
 }
 .react-calendar__tile--active {
   background: #514EF3;
   color: white;
-  border-radius: 8px;
 }
 .react-calendar__tile:hover {
-  background: #D6E4FF;
-  border-radius: 8px;
+  background: #EAF2FF;
 }
 .react-calendar__tile.has-article {
   background-color: #FFFFFF !important;
 }
-.react-calendar__month-view__days__day {
-  flex-grow: 1;
-}
-
-/* ── 캘린더 내 기사 카드 ── */
+.calendar-tile-content { display: grid; gap: 6px; margin-top: 4px; }
 .calendar-article {
-  margin: 0 auto;
-  width: 90%;
-  background: #3e71ff !important;
-  color: #fff !important;
-  font-size: 15px !important;
-  font-weight: 300;
-  padding: 6px 12px !important;
-  border-radius: 6px !important;
-  border: none !important;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1) !important;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: box-shadow 0.2s;
+  margin: 0 auto; width: 90%;
+  background: #3e71ff !important; color: #fff !important;
+  font-size: 13px !important; font-weight: 500;
+  padding: 5px 10px !important; border-radius: 6px !important; border: none !important;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08) !important;
+  display: flex; align-items: center; justify-content: center;
 }
-.calendar-article:hover {
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
-}
+.calendar-article:hover { filter: brightness(1.05); }
+.calendar-more { text-align: center; font-size: 12px; color: #6f88a2; }
 
+/* 날짜 기사 팝업 */
 .date-articles-popup {
-  position: absolute;
-  top: 16px;
-  left: 16px;
-  right: 16px;
+  position: sticky;
+  bottom: 0;
+  margin-top: 10px;
   background: #ffffff;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-  padding: 16px;
-  z-index: 10;
+  border: 1px solid #e6eef7;
+  border-radius: 10px;
+  box-shadow: 0 8px 18px rgba(12,39,66,0.06);
+  padding: 14px;
+  z-index: 1;
 }
 .date-articles-popup h3 {
-  margin: 0 0 12px;
-  font-size: 1rem;
-  color: #305078;
+  margin: 0 0 8px;
+  font-size: 15px; color: #305078;
 }
 .date-articles-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  max-height: 200px;
-  overflow-y: auto;
+  display: grid; gap: 8px; max-height: 220px; overflow-y: auto;
 }
 .date-article-card {
-  padding: 8px 12px;
-  background: #F6FAFD;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background 0.2s;
+  padding: 10px 12px; background: #F6FAFD;
+  border: 1px solid #E6EEF7; border-radius: 8px;
+  cursor: pointer; transition: background .15s ease, transform .06s ease;
 }
-.date-article-card:hover {
-  background: #E8F2FA;
-}
-.date-article-title {
-  font-weight: 600;
-  font-size: 0.95rem;
-  color: #1e2c3d;
-}
-.date-article-snippet {
-  font-size: 0.85rem;
-  color: #555;
-  margin-top: 4px;
-}
+.date-article-card:hover { background: #EAF2FF; transform: translateY(-1px); }
+.date-article-title { font-weight: 700; font-size: 14px; color: #1e2c3d; }
+.date-article-snippet { font-size: 12px; color: #5e6f7f; margin-top: 4px; }
 
-/* ── 팀 목록 ── */
+/* 팀 목록 */
 .teams-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  margin-top: 12px;
+  display: flex; flex-wrap: wrap; gap: 14px; margin-top: 12px;
 }
 .team-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding: 18px;
-  background: #F6FAFD;
-  border: 1px solid #EAEEF4;
-  border-radius: 14px;
-  font-weight: bold;
-  color: #305078;
-  font-size: 14px;
-  min-width: 110px;
-  text-align: center;
-  margin-bottom: 12px;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 16px; background: #F6FAFD; border: 1px solid #EAEEF4; border-radius: 14px;
+  font-weight: 700; color: #305078; font-size: 14px; min-width: 110px; text-align: center;
 }
 .team-logo {
-  width: 72px;
-  height: 72px;
-  border-radius: 14px;
-  background: #fff;
-  border: 2px solid #EEE;
+  width: 72px; height: 72px; border-radius: 14px; background: #fff; border: 2px solid #EEE;
   object-fit: contain;
 }
 
-/* ── 최근 경기 카드 ── */
-.games-card h3 {
-  margin: 0 0 12px;
-  font-size: 1.1rem;
-  color: #333;
+/* 오른쪽 기사 */
+.article { margin-bottom: 14px; border-bottom: 1px solid #7875FF; padding-bottom: 10px; }
+.article-title { font-weight: 700; font-size: 13px; color: #0e2134; }
+.article-date { font-size: 11px; color: #8aa0b5; }
+
+/* 조회수 차트 */
+.views-chart-card { margin-top: 16px; }
+
+/* 다가오는 경기 */
+.upcoming-card .upcoming-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+.upcoming-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 12px; background: #f8fbff; border: 1px solid #e9f0f8; border-radius: 10px;
 }
-.game {
-  display: flex;
-  flex-direction: column;
-  margin-bottom: 16px;
-}
-.game-teams {
-  display: flex;
-  align-items: center;
-}
-.team-logo-sm {
-  width: 24px;
-  height: 24px;
-  object-fit: contain;
-  margin: 0 6px;
-}
-.team-name {
-  font-size: 0.9rem;
-  font-weight: 500;
-  color: #444;
-  margin: 0 4px;
-  white-space: nowrap;
-}
-.score {
-  font-size: 1rem;
-  font-weight: 700;
-  color: #222;
-  margin: 0 4px;
-}
-.vs {
-  font-size: 0.9rem;
-  color: #888;
-  margin: 0 4px;
-}
-.game-date {
-  font-size: 0.8rem;
-  color: #777;
-  margin-left: 34px;
+.upcoming-item .u-date { font-weight: 800; color: #274765; width: 92px; }
+.u-teams { display: flex; align-items: center; gap: 6px; color: #0c2742; font-weight: 600; }
+.team-logo-sm { width: 20px; height: 20px; object-fit: contain; }
+.vs { color: #7d94ab; margin: 0 4px; }
+
+.empty {
+  padding: 16px; background: #f6faff; border: 1px dashed #c8d6e6; color: #6a87a3; border-radius: 10px;
 }
 
-/* ── 사이드바 기사 목록 ── */
-.article {
-  margin-bottom: 14px;
-  border-bottom: 1px solid #7875FF;
-  padding-bottom: 10px;
+/* 반응형 */
+@media (max-width: 1100px) {
+  .grid-2 { grid-template-columns: 1fr; }
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .search { min-width: 220px; }
 }
-.article-title {
-  font-weight: 600;
-  font-size: 13px;
-  color: #000;
-}
-.article-summary {
-  font-size: 9px;
-  color: #000;
-  margin: 3px 0;
-}
-.article-date {
-  font-size: 10px;
-  color: #A0AEC0;
-}
-
-/* ── 조회수 차트 카드 ── */
-.views-chart-card {
-  background: white;
-  padding: 20px;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  margin-top: 30px;
-  box-sizing: border-box;
-}
-
-/* 필터 버튼 */
-.view-filter-buttons {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-bottom: 12px;
-}
-.view-filter-buttons button {
-  padding: 6px 12px;
-  border: 1px solid #ccc;
-  background-color: #F6FAFD;
-  border-radius: 8px;
-  font-size: 13px;
-  color: #305078;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.view-filter-buttons button.active,
-.view-filter-buttons button:hover {
-  background-color: #305078;
-  color: #fff;
-  border-color: #305078;
-}
-
-/* 차트 제목 */
-.views-chart-card h3 {
-  margin-bottom: 12px;
-  font-size: 16px;
-  font-weight: bold;
-  color: #333;
+@media (max-width: 720px) {
+  .dash-header { grid-template-columns: 1fr; }
+  .actions { justify-content: space-between; }
+  .kpi-grid { grid-template-columns: 1fr 1fr; }
 }

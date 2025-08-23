@@ -1,35 +1,44 @@
 // src/pages/Platform.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import '../styles/Platform.css';
 import { Link } from 'react-router-dom';
 
+const PLACEHOLDER_IMG = '/assets/placeholder.jpg';
+
 export default function Platform() {
   const scheduleTabs = ['주요 경기', 'KBO', '야구 기타'];
-  const itemsPerSlide = 5;
+
+  // ✅ 탭 선택 상태
+  const [activeTab, setActiveTab] = useState(scheduleTabs[0]);
+
+  // 반응형: 화면 너비 → 슬라이드 카드 개수
+  const computeItemsPer = () => {
+    const w = window.innerWidth;
+    if (w >= 1280) return 6;
+    if (w >= 1120) return 5;
+    if (w >= 992)  return 4;
+    if (w >= 768)  return 3;
+    return 2;
+  };
+  const [itemsPerSlide, setItemsPerSlide] = useState(computeItemsPer());
   const [slideIndex, setSlideIndex] = useState(0);
+
+  // 데이터 상태
   const [savedArticles, setSavedArticles] = useState([]);
+  const [records, setRecords] = useState([]);
+  const [hotTopics, setHotTopics] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // ➕ Rightbar 더미 데이터
-  const [records, setRecords] = useState([
-    { id: 1, title: 'LG 5-3 KIA (8/14)', detail: '9회말 끝내기 2루타', tag: '경기 요약' },
-    { id: 2, title: '두산 7-2 SSG (8/13)', detail: '선발 7이닝 1실점 QS', tag: '투수 기록' },
-    { id: 3, title: 'NC 3-0 KT (8/12)', detail: '팀 무실점 승리', tag: '클린시트' },
-  ]);
-  const [hotTopics, setHotTopics] = useState([
-    { id: 't1', text: '루키 외야수, 데뷔 첫 홈런으로 팀 승리 견인', heat: 92 },
-    { id: 't2', text: '8월 MVP 레이스, 불펜 에이스 급부상', heat: 88 },
-    { id: 't3', text: '트레이드 마감 임박, 각 팀 보강 시나리오', heat: 83 },
-  ]);
-
+  // “현실적” 더미 (stadium/broadcaster/scheduledAt 포함)
   const matchList = [
-    { status: 'LIVE',      league: 'KBO', homeTeam: 'LG',   homeScore: 3, awayTeam: 'KIA',   awayScore: 2, homeLogo: '/LG.png',     awayLogo: '/KIA.png' },
-    { status: '15:00 예정', league: 'KBO', homeTeam: 'KT',   homeScore: 0, awayTeam: 'NC',    awayScore: 0, homeLogo: '/KT.png',     awayLogo: '/NC.png' },
-    { status: '종료',       league: 'KBO', homeTeam: 'SSG',  homeScore: 4, awayTeam: '두산',  awayScore: 5, homeLogo: '/SSG.png',    awayLogo: '/DOOSAN.png' },
-    { status: '18:00 예정', league: 'KBO', homeTeam: '삼성', homeScore: 0, awayTeam: '한화',  awayScore: 0, homeLogo: '/SAMSUNG.png', awayLogo: '/HANWHA.png' },
-    { status: '종료',       league: 'KBO', homeTeam: '키움', homeScore: 1, awayTeam: '롯데',  awayScore: 2, homeLogo: '/KIWOOM.png',  awayLogo: '/LOTTE.png' }
+    { status: 'LIVE',       league: 'KBO', homeTeam: 'LG',   homeScore: 3, awayTeam: 'KIA',   awayScore: 2, homeLogo: '/LG.png',      awayLogo: '/KIA.png',      stadium: '잠실', broadcaster: 'SPOTV' },
+    { status: '15:00 예정', league: 'KBO', homeTeam: 'KT',   homeScore: 0, awayTeam: 'NC',    awayScore: 0, homeLogo: '/KT.png',      awayLogo: '/NC.png',       stadium: '수원', broadcaster: 'SBS Sports', scheduledAt: todayWithTime('15:00') },
+    { status: '종료',        league: 'KBO', homeTeam: 'SSG',  homeScore: 4, awayTeam: '두산',  awayScore: 5, homeLogo: '/SSG.png',     awayLogo: '/DOOSAN.png',   stadium: '문학' },
+    { status: '18:00 예정',  league: 'KBO', homeTeam: '삼성', homeScore: 0, awayTeam: '한화',  awayScore: 0, homeLogo: '/SAMSUNG.png',  awayLogo: '/HANWHA.png',   stadium: '대구', broadcaster: 'KBSN', scheduledAt: todayWithTime('18:00') },
+    { status: '종료',        league: 'KBO', homeTeam: '키움', homeScore: 1, awayTeam: '롯데',  awayScore: 2, homeLogo: '/KIWOOM.png',   awayLogo: '/LOTTE.png',    stadium: '고척' },
   ];
 
-  const dummyArticles = [
+  const fallbackArticles = [
     { id: 1, title: "‘홈런 쇼’ KBO 올스타전, 올해 MVP는 누구?", reporter: "이정원 기자", views: 15230, image: "/assets/article1.jpg" },
     { id: 2, title: "역전극의 주인공, 한화의 신예 투수 등장",     reporter: "박지훈 기자", views: 12045, image: "/assets/article2.jpg" },
     { id: 3, title: "LG, 9회말 끝내기 승리…관중 2만 5천 환호",    reporter: "김수연 기자", views: 11020, image: "/assets/article3.jpg" },
@@ -37,70 +46,189 @@ export default function Platform() {
     { id: 5, title: "롯데, 3년 만에 포스트시즌 진출 확정",         reporter: "최은지 기자", views: 8700,  image: "/assets/article5.jpg" }
   ];
 
+  // 초기 로드 & 로딩 스켈레톤
   useEffect(() => {
-    const stored = JSON.parse(localStorage.getItem('saved_files') || '[]');
-    setSavedArticles(stored.length ? stored : dummyArticles);
+    setLoading(true);
+    try {
+      const stored = JSON.parse(localStorage.getItem('saved_files') || '[]');
+      setSavedArticles(stored.length ? stored : fallbackArticles);
 
-    // 필요 시 로컬스토리지에서 기록/이슈도 불러오기 (키만 정하면 됨)
-    const storedRecords = JSON.parse(localStorage.getItem('recent_records') || '[]');
-    if (storedRecords.length) setRecords(storedRecords);
+      const storedRecords = JSON.parse(localStorage.getItem('recent_records') || '[]');
+      setRecords(storedRecords.length ? storedRecords : [
+        { id: 1, title: 'LG 5-3 KIA (8/14)', detail: '9회말 끝내기 2루타', tag: '경기 요약' },
+        { id: 2, title: '두산 7-2 SSG (8/13)', detail: '선발 7이닝 1실점 QS', tag: '투수 기록' },
+        { id: 3, title: 'NC 3-0 KT (8/12)', detail: '팀 무실점 승리', tag: '클린시트' },
+      ]);
 
-    const storedTopics = JSON.parse(localStorage.getItem('hot_topics') || '[]');
-    if (storedTopics.length) setHotTopics(storedTopics);
+      const storedTopics = JSON.parse(localStorage.getItem('hot_topics') || '[]');
+      setHotTopics(storedTopics.length ? storedTopics : [
+        { id: 't1', text: '루키 외야수, 데뷔 첫 홈런으로 팀 승리 견인', heat: 46 },
+        { id: 't2', text: '8월 MVP 레이스, 불펜 에이스 급부상', heat: 21 },
+        { id: 't3', text: '트레이드 마감 임박, 각 팀 보강 시나리오', heat: 33 },
+      ]);
+    } catch {
+      setSavedArticles(fallbackArticles);
+    } finally {
+      const t = setTimeout(() => setLoading(false), 250);
+      return () => clearTimeout(t);
+    }
   }, []);
 
-  const articles = (savedArticles && savedArticles.length > 0) ? savedArticles : dummyArticles;
-  const sortedArticles = [...articles].sort((a, b) => (b.views || 0) - (a.views || 0));
+  // 리사이즈 시 반응형 카드 개수 업데이트
+  useEffect(() => {
+    const onResize = () => setItemsPerSlide((prev) => {
+      const next = computeItemsPer();
+      // 현재 슬라이드가 범위를 벗어나면 0으로 리셋
+      if (Math.ceil(filteredMatches.length / next) <= slideIndex) setSlideIndex(0);
+      return next;
+    });
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slideIndex, activeTab]);
+
+  // ✅ 탭에 따른 경기 리스트 필터 (예시: '야구 기타'는 KBO 외)
+  const filteredMatches = useMemo(() => {
+    if (activeTab === 'KBO') return matchList.filter(m => m.league === 'KBO');
+    if (activeTab === '야구 기타') return matchList.filter(m => m.league !== 'KBO');
+    return matchList; // '주요 경기'
+  }, [activeTab]);
+
+  // ✅ 페이지 단위로 분할해 슬라이드
+  const pages = useMemo(() => {
+    const arr = [];
+    for (let i = 0; i < filteredMatches.length; i += itemsPerSlide) {
+      arr.push(filteredMatches.slice(i, i + itemsPerSlide));
+    }
+    return arr.length ? arr : [[]];
+  }, [filteredMatches, itemsPerSlide]);
+
+  const totalSlides = pages.length;
+  const canPrev = totalSlides > 1;
+  const canNext = totalSlides > 1;
+
+  const nextSlide = () => setSlideIndex(prev => (prev + 1) % totalSlides);
+  const prevSlide = () => setSlideIndex(prev => (prev - 1 + totalSlides) % totalSlides);
+
+  // ✅ 탭 변경 시 첫 페이지로
+  useEffect(() => { setSlideIndex(0); }, [activeTab]);
+
+  // 👉 모바일 스와이프 지원
+  const touchStartX = useRef(0);
+  const touchDx = useRef(0);
+  const onTouchStart = (e) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchDx.current = 0;
+  };
+  const onTouchMove = (e) => {
+    touchDx.current = e.touches[0].clientX - touchStartX.current;
+  };
+  const onTouchEnd = () => {
+    const threshold = 40;
+    if (touchDx.current < -threshold && canNext) nextSlide();
+    if (touchDx.current > threshold && canPrev) prevSlide();
+  };
+
+  const articles = (savedArticles && savedArticles.length > 0) ? savedArticles : fallbackArticles;
+
+  const sortedArticles = useMemo(() => {
+    return [...articles].sort((a, b) => (safeNum(b.views) - safeNum(a.views)));
+  }, [articles]);
 
   const getStatusColor = (status) => {
     if (status === 'LIVE') return '#E60000';
-    if (status.includes('예정')) return '#3283FD';
+    if (status?.includes?.('예정')) return '#3283FD';
     return '#757575';
   };
 
-  const totalSlides = Math.ceil(matchList.length / itemsPerSlide);
-  const visibleMatches = matchList.slice(slideIndex * itemsPerSlide, (slideIndex + 1) * itemsPerSlide);
-
-  const nextSlide = () => setSlideIndex((prev) => (prev + 1) % totalSlides);
-  const prevSlide = () => setSlideIndex((prev) => (prev - 1 + totalSlides) % totalSlides);
-
-  const formatHeat = (n) => `${n}%`;
-  const cut = (s, n = 40) => (s.length > n ? s.slice(0, n) + '…' : s);
+  const formatHeat = (n) => `${safeNum(n)}%`;
+  const cut = (s, n = 40) => (String(s || '').length > n ? String(s).slice(0, n) + '…' : String(s || ''));
+  const viewsText = (v) => `${safeNum(v).toLocaleString?.() || safeNum(v)} views`;
 
   return (
-    <div className="platform-wrapper">
+    <div className="platform-wrapper" role="main" aria-label="스포츠 플랫폼">
       {/* ======= 상단 영역 ======= */}
-      <div className="top-schedule" style={{ marginTop: '90px' }}>
-        <div className="schedule-tabs">
-          {scheduleTabs.map((tab, idx) => (
-            <button key={idx} className={idx === 0 ? 'tab active' : 'tab'}>{tab}</button>
+      <div className="top-schedule">
+        <div className="schedule-tabs" role="tablist" aria-label="대회 탭">
+          {scheduleTabs.map((tab) => (
+            <button
+              key={tab}
+              role="tab"
+              aria-selected={activeTab === tab}
+              className={`tab ${activeTab === tab ? 'active' : ''}`}
+              onClick={() => setActiveTab(tab)}
+            >
+              {tab}
+            </button>
           ))}
         </div>
 
-        <div className="schedule-slider">
-          <button className="slide-button" onClick={prevSlide}>{'<'}</button>
-          <div className="slide-window">
-            <div className="slide-track">
-              {visibleMatches.map((match, idx) => (
-                <div key={idx} className="match-card">
-                  <div className="match-status" style={{ color: getStatusColor(match.status) }}>{match.status}</div>
-                  <div className="match-league">{match.league}</div>
+        {/* ✅ 페이지 슬라이더 */}
+        <div className="schedule-slider" aria-label="경기 슬라이더">
+          <button className="slide-button" onClick={prevSlide} disabled={!canPrev} aria-label="이전">{'<'}</button>
 
-                  <div className="team-row">
-                    <img src={`/assets${match.homeLogo}`} alt={match.homeTeam} />
-                    <span>{match.homeTeam}</span>
-                    <strong style={{ marginLeft: 'auto' }}>{match.homeScore}</strong>
-                  </div>
-                  <div className="team-row">
-                    <img src={`/assets${match.awayLogo}`} alt={match.awayTeam} />
-                    <span>{match.awayTeam}</span>
-                    <strong style={{ marginLeft: 'auto' }}>{match.awayScore}</strong>
-                  </div>
+          <div
+            className="slide-window"
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
+          >
+            <div
+              className="slide-track slide-track--paged"
+              style={{
+                width: `${totalSlides * 100}%`,
+                transform: `translateX(-${(100 / totalSlides) * slideIndex}%)`,
+              }}
+            >
+              {pages.map((page, pIdx) => (
+                <div className="slide-page" key={pIdx} style={{ width: `${100 / totalSlides}%` }}>
+                  {page.map((m, idx) => (
+                    <article key={`${pIdx}-${idx}`} className="match-card" aria-label={`${m.league} ${m.homeTeam} vs ${m.awayTeam}`}>
+                      <div className="match-head">
+                        <div className="match-status" style={{ color: getStatusColor(m.status) }}>
+                          {m.status === 'LIVE' && <span className="live-dot" aria-hidden />}
+                          {m.status}
+                        </div>
+                        <div className="match-league">{m.league}</div>
+                      </div>
+
+                      <div className="team-row">
+                        <img src={`/assets${m.homeLogo}`} alt={m.homeTeam} onError={imgOnError} />
+                        <span className="team-name">{m.homeTeam}</span>
+                        <strong className="score">{safeNum(m.homeScore)}</strong>
+                      </div>
+                      <div className="team-row">
+                        <img src={`/assets${m.awayLogo}`} alt={m.awayTeam} onError={imgOnError} />
+                        <span className="team-name">{m.awayTeam}</span>
+                        <strong className="score">{safeNum(m.awayScore)}</strong>
+                      </div>
+
+                      <div className="match-meta">
+                        {m.stadium && <span className="pill">{m.stadium}</span>}
+                        {m.broadcaster && <span className="pill">{m.broadcaster}</span>}
+                        {m.scheduledAt && <Countdown scheduledAt={m.scheduledAt} />}
+                      </div>
+                    </article>
+                  ))}
                 </div>
               ))}
             </div>
           </div>
-          <button className="slide-button" onClick={nextSlide}>{'>'}</button>
+
+          <button className="slide-button" onClick={nextSlide} disabled={!canNext} aria-label="다음">{'>'}</button>
+        </div>
+
+        {/* 인디케이터 */}
+        <div className="dots" role="tablist" aria-label="슬라이드 위치">
+          {Array.from({ length: totalSlides }).map((_, i) => (
+            <button
+              key={i}
+              className={`dot-btn ${i === slideIndex ? 'active' : ''}`}
+              onClick={() => setSlideIndex(i)}
+              aria-selected={i === slideIndex}
+              aria-label={`${i + 1}번째 슬라이드로 이동`}
+            />
+          ))}
         </div>
       </div>
 
@@ -108,93 +236,184 @@ export default function Platform() {
       <div className="content-grid">
         {/* 메인 뉴스 영역 */}
         <div className="main-column">
-          <div className="news-section">
+          <section className="news-section" aria-label="주요 뉴스">
             <h2>야구 <span className="highlight">NOW</span></h2>
 
-            {sortedArticles[0] && (
-              <Link to={`/platform/article/${sortedArticles[0].id}`} className="news-main-link">
-                <div className="news-main">
-                  <img src={sortedArticles[0].image} alt="main" className="news-main-img" />
-                  <div className="news-main-title">{sortedArticles[0].title}</div>
-                  <div className="news-main-reporter">🖋 {sortedArticles[0].reporter}</div>
-                  <div className="news-main-views">👁 {sortedArticles[0].views?.toLocaleString?.()} views</div>
+            {/* 스켈레톤 */}
+            {loading ? (
+              <div className="news-main skeleton" aria-hidden>
+                <div className="sk-img" />
+                <div className="sk-lines">
+                  <div className="sk-line w-80" />
+                  <div className="sk-line w-60" />
+                  <div className="sk-line w-40" />
                 </div>
-              </Link>
-            )}
+              </div>
+            ) : (
+              <>
+                {sortedArticles[0] ? (
+                  <Link to={`/platform/article/${sortedArticles[0].id || 0}`} className="news-main-link">
+                    <article className="news-main">
+                      <img
+                        src={sortedArticles[0].image || PLACEHOLDER_IMG}
+                        alt={sortedArticles[0].title || 'main'}
+                        className="news-main-img"
+                        onError={imgOnError}
+                      />
+                      <div>
+                        <h3 className="news-main-title">{sortedArticles[0].title || '제목 없음'}</h3>
+                        <div className="news-main-reporter">🖋 {sortedArticles[0].reporter || '기자 미상'}</div>
+                        <div className="news-main-views">👁 {viewsText(sortedArticles[0].views)}</div>
+                        <div className="tag-list">
+                          {(sortedArticles[0].tags || ['속보', 'KBO']).slice(0, 3).map((t) => (
+                            <span key={t} className="tag">#{t}</span>
+                          ))}
+                        </div>
+                      </div>
+                    </article>
+                  </Link>
+                ) : (
+                  <EmptyCard title="표시할 메인 기사가 없어요" actionText="첫 기사 만들기" to="/result" />
+                )}
 
-            <div className="news-sub-list">
-              {sortedArticles.slice(1).map((item) => (
-                <Link to={`/platform/article/${item.id}`} className="news-sub-item" key={item.id}>
-                  <img src={item.image} alt="thumb" className="news-thumb" />
-                  <div>
-                    <div className="news-sub-title">{item.title}</div>
-                    <div className="news-sub-reporter">🖋 {item.reporter}</div>
-                    <div className="news-sub-views">👁 {item.views?.toLocaleString?.()} views</div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
+                <div className="news-sub-list">
+                  {sortedArticles.slice(1, 7).map((item) => (
+                    <Link to={`/platform/article/${item.id || 0}`} className="news-sub-item" key={item.id || item.title}>
+                      <img
+                        src={item.image || PLACEHOLDER_IMG}
+                        alt="thumb"
+                        className="news-thumb"
+                        onError={imgOnError}
+                      />
+                      <div>
+                        <div className="news-sub-title">{item.title || '제목 없음'}</div>
+                        <div className="news-sub-reporter">🖋 {item.reporter || '기자 미상'}</div>
+                        <div className="news-sub-views">👁 {viewsText(item.views)}</div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </>
+            )}
+          </section>
         </div>
 
         {/* 👉 우측 사이드 영역 */}
-        <aside className="right-column">
+        <aside className="right-column" aria-label="사이드 정보">
           <div className="right-sticky">
-            {/* 카드 1: 오늘의 경기 기록 */}
-            <section className="right-card">
-              <div className="right-card-header">
-                <h3>오늘의 기록</h3>
-                <button className="mini-link" onClick={() => alert('기록 더보기 준비 중!')}>더보기</button>
-              </div>
-              <ul className="record-list">
-                {records.slice(0, 4).map(r => (
-                  <li key={r.id} className="record-item">
-                    <div className="record-title">⚾ {r.title}</div>
-                    <div className="record-detail">{r.detail}</div>
-                    <span className="record-tag">{r.tag}</span>
-                  </li>
-                ))}
-              </ul>
-            </section>
+            <SideCard
+              title="오늘의 기록"
+              items={records.slice(0, 5)}
+              emptyText="오늘 기록이 아직 없어요."
+              onMore={() => alert('기록 더보기 준비 중!')}
+              renderItem={(r) => (
+                <li key={r.id} className="record-item">
+                  <div className="record-title">⚾ {r.title}</div>
+                  <div className="record-detail">{r.detail}</div>
+                  <span className="record-tag">{r.tag}</span>
+                </li>
+              )}
+            />
 
-            {/* 카드 2: 뜨거운 이슈 */}
-            <section className="right-card">
-              <div className="right-card-header">
-                <h3>이슈 토픽</h3>
-                <button className="mini-link" onClick={() => alert('이슈 더보기 준비 중!')}>더보기</button>
-              </div>
-              <ul className="topic-list">
-                {hotTopics.slice(0, 5).map(t => (
-                  <li key={t.id} className="topic-item">
-                    <div className="topic-text">{cut(t.text, 48)}</div>
-                    <div className="topic-heat">{formatHeat(t.heat)}</div>
-                  </li>
-                ))}
-              </ul>
-            </section>
+            <SideCard
+              title="이슈 토픽"
+              items={hotTopics.slice(0, 6)}
+              emptyText="이슈 토픽이 아직 없어요."
+              onMore={() => alert('이슈 더보기 준비 중!')}
+              renderItem={(t) => (
+                <li key={t.id} className="topic-item">
+                  <div className="topic-text">{cut(t.text, 48)}</div>
+                  <div className="topic-heat">{formatHeat(t.heat)}</div>
+                </li>
+              )}
+            />
 
-            {/* 카드 3: 내 저장함 */}
-            <section className="right-card">
-              <div className="right-card-header">
-                <h3>내 저장함</h3>
-                <Link to="/file" className="mini-link">관리</Link>
-              </div>
-              <ul className="saved-list">
-                {(savedArticles.length ? savedArticles : []).slice(0, 4).map(a => (
-                  <li key={a.id || a.title} className="saved-item">
-                    <Link to={`/platform/article/${a.id || 0}`} className="saved-link">
-                      <span className="dot" /> {cut(a.title || '제목 없음', 36)}
-                    </Link>
-                  </li>
-                ))}
-                {!savedArticles.length && (
-                  <li className="saved-empty">아직 저장된 기사가 없어요.</li>
-                )}
-              </ul>
-            </section>
+            <SideCard
+              title="내 저장함"
+              rightLink={{ to: '/file', text: '관리' }}
+              items={(savedArticles || []).slice(0, 6)}
+              emptyText="아직 저장된 기사가 없어요."
+              renderItem={(a) => (
+                <li key={a.id || a.title} className="saved-item">
+                  <Link to={`/platform/article/${a.id || 0}`} className="saved-link">
+                    <span className="dot" /> {cut(a.title || '제목 없음', 36)}
+                  </Link>
+                </li>
+              )}
+            />
           </div>
         </aside>
       </div>
+    </div>
+  );
+}
+
+/* ===== 유틸/보조 컴포넌트 ===== */
+
+function safeNum(v) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function imgOnError(e) {
+  e.currentTarget.src = PLACEHOLDER_IMG;
+}
+
+function todayWithTime(hhmm = '18:00') {
+  const [hh, mm] = hhmm.split(':').map(Number);
+  const d = new Date();
+  d.setHours(hh || 0, mm || 0, 0, 0);
+  return d.toISOString();
+}
+
+function Countdown({ scheduledAt }) {
+  const [left, setLeft] = useState(calcDiff(scheduledAt));
+  useEffect(() => {
+    const t = setInterval(() => setLeft(calcDiff(scheduledAt)), 1000);
+    return () => clearInterval(t);
+  }, [scheduledAt]);
+  if (!left) return null;
+  return <span className="pill pill-time" title="경기 시작까지">{left}</span>;
+}
+function calcDiff(iso) {
+  try {
+    const target = new Date(iso).getTime();
+    const now = Date.now();
+    const ms = target - now;
+    if (ms <= 0) return '곧 시작';
+    const h = Math.floor(ms / 3_600_000);
+    const m = Math.floor((ms % 3_600_000) / 60_000);
+    const s = Math.floor((ms % 60_000) / 1000);
+    return `${h}시간 ${m}분 ${s}초`;
+  } catch { return null; }
+}
+
+function SideCard({ title, items = [], emptyText, rightLink, onMore, renderItem }) {
+  return (
+    <section className="right-card">
+      <div className="right-card-header">
+        <h3>{title}</h3>
+        {rightLink ? (
+          <Link to={rightLink.to} className="mini-link">{rightLink.text}</Link>
+        ) : (
+          <button className="mini-link" onClick={onMore}>더보기</button>
+        )}
+      </div>
+      <ul className={title === '이슈 토픽' ? 'topic-list' : title === '오늘의 기록' ? 'record-list' : 'saved-list'}>
+        {items.length ? items.map(renderItem) : <li className="saved-empty">{emptyText}</li>}
+      </ul>
+    </section>
+  );
+}
+
+function EmptyCard({ title = '내용이 없어요', actionText, to }) {
+  return (
+    <div className="empty-card">
+      <div className="empty-icon">🗂️</div>
+      <div className="empty-title">{title}</div>
+      {actionText && to && (
+        <Link to={to} className="btn-empty">{actionText}</Link>
+      )}
     </div>
   );
 }

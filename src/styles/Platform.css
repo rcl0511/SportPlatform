@@ -1,436 +1,205 @@
-/* styles/Platform.css */
-
-.platform-wrapper {
+/* ===== 베이스 ===== */
+.platform-wrapper{
+  --header-h: 90px;
   font-family: 'Mulish', sans-serif;
-  padding: 20px;
-  background-color: #f7f9fc;
+  padding: calc(20px + var(--header-h)) 20px 20px;
+  background: #f7f9fc;
   min-height: 100vh;
+  box-sizing: border-box;
 }
 
-/* --- 상단 경기 슬라이드 --- */
-.top-schedule {
-  margin-bottom: 40px;
+/* ===== 상단 경기 슬라이드 ===== */
+.top-schedule{ margin-bottom: 28px; }
+
+.schedule-tabs{
+  display:flex; gap:12px; margin-bottom:12px; flex-wrap:wrap;
+}
+.tab{
+  padding:8px 16px; border:none; background:#e3eaf2; color:#333;
+  border-radius:20px; cursor:pointer; font-weight:700;
+}
+.tab.active{ background:#3283fd; color:#fff; }
+
+.schedule-slider{
+  display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:8px;
+}
+.slide-button{
+  background:#fff; border:1px solid #e5ebf4; width:36px; height:36px; border-radius:8px;
+  cursor:pointer; font-size:18px; color:#333; display:grid; place-items:center;
+}
+.slide-button:hover{ background:#f2f6ff; }
+
+.slide-window{ overflow:hidden; }
+.slide-track{ display:flex; gap:16px; padding:0 2px; }
+
+.match-card{
+  background:#fff; border-radius:12px; padding:14px;
+  width: clamp(160px, 18vw, 220px);
+  box-shadow: 0 2px 8px rgba(0,0,0,.05);
+  flex:0 0 auto;
+}
+.match-card.placeholder{ opacity:.25; }
+
+.match-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+.match-status{ font-weight:800; display:flex; align-items:center; gap:6px; }
+.live-dot{
+  width:8px; height:8px; border-radius:50%; background:#E60000;
+  box-shadow:0 0 0 0 rgba(230,0,0,.6); animation: ping 1.4s infinite;
+}
+@keyframes ping{
+  0%{ box-shadow:0 0 0 0 rgba(230,0,0,.6); }
+  70%{ box-shadow:0 0 0 10px rgba(230,0,0,0); }
+  100%{ box-shadow:0 0 0 0 rgba(230,0,0,0); }
+}
+.match-league{ font-size:12px; color:#888; }
+
+.team-row{ display:flex; align-items:center; gap:8px; margin:6px 0; min-width:0; }
+.team-row img{ width:24px; height:24px; object-fit:contain; }
+.team-name{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.score{ margin-left:auto; font-weight:800; }
+
+.match-meta{ display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+.pill{
+  font-size:12px; padding:4px 8px; border-radius:999px; background:#f5f7ff; color:#2a3f63; border:1px solid #e6ebf7;
+}
+.pill-time{ background:#fff7ec; color:#9a4c00; border-color:#ffe2bf; }
+
+/* 슬라이드 점 */
+.dots{ display:flex; gap:6px; justify-content:center; margin-top:10px; }
+.dot-btn{
+  width:8px; height:8px; border-radius:50%; background:#c7d4e6; border:none; cursor:pointer;
+}
+.dot-btn.active{ background:#514EF3; }
+
+/* ===== 레이아웃 (한 번만 정의) ===== */
+.content-grid{
+  display:grid; grid-template-columns: 1fr 320px;
+  gap:20px; max-width:1200px; margin:0 auto; padding:0 16px; box-sizing:border-box;
+}
+.main-column{ min-width:0; }
+.right-column{ min-width:280px; }
+.right-sticky{ position:sticky; top: calc(var(--header-h) + 6px); }
+
+/* ===== 뉴스 섹션 ===== */
+.news-section{ padding:20px 0; }
+.news-section h2{ font-size:24px; font-weight:800; margin:0 0 14px; }
+.highlight{ color:#3283fd; }
+
+.news-main-link{ display:block; margin-bottom:24px; text-decoration:none; color:inherit; }
+.news-main{
+  display:flex; gap:16px; align-items:center;
+  padding:16px; background:#fff; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,.05);
+  transition: transform .18s ease;
+}
+.news-main:hover{ transform: translateY(-3px); }
+
+.news-main-img{
+  width: clamp(160px, 22vw, 240px);
+  height: clamp(110px, 14vw, 160px);
+  object-fit:cover; border-radius:10px; flex-shrink:0;
+}
+.news-main-title{ font-size: clamp(18px, 2.2vw, 20px); font-weight:800; margin-bottom:6px; color:#1f2937; }
+.news-main-reporter, .news-main-views{ font-size:14px; color:#555; }
+
+.tag-list{ display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+.tag{ background:#deeffb; color:#1f2937; font-size:12px; padding:6px 12px; border-radius:999px; }
+
+.news-sub-list{ display:grid; gap:12px; }
+.news-sub-item{
+  display:grid; grid-template-columns:auto 1fr; gap:12px; align-items:center;
+  text-decoration:none; color:inherit; background:#fff; padding:12px; border-radius:10px; box-shadow:0 1px 4px rgba(0,0,0,.05);
+}
+.news-thumb{ width:72px; height:72px; object-fit:cover; border-radius:8px; }
+.news-sub-title{ font-weight:700; margin-bottom:4px; }
+.news-sub-reporter, .news-sub-views{ font-size:13px; color:#666; }
+
+/* 스켈레톤 */
+.skeleton{ position:relative; overflow:hidden; }
+.sk-img{ width: clamp(160px,22vw,240px); height: clamp(110px,14vw,160px); background:#e9eef5; border-radius:10px; }
+.sk-lines{ display:grid; gap:8px; }
+.sk-line{ height:12px; background:#e9eef5; border-radius:6px; }
+.w-80{ width:80%; } .w-60{ width:60%; } .w-40{ width:40%; }
+.skeleton::after{
+  content:''; position:absolute; inset:0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.5), transparent);
+  transform: translateX(-100%); animation: shimmer 1.2s infinite;
+}
+@keyframes shimmer{
+  100% { transform: translateX(100%); }
 }
 
-.schedule-tabs {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 16px;
+/* 빈 상태 */
+.empty-card{
+  display:grid; place-items:center; gap:10px; padding:24px;
+  background:#fff; border:1px dashed #dfe6f2; border-radius:12px; color:#6a7f96;
 }
-
-.tab {
-  padding: 8px 16px;
-  border: none;
-  background: #e3eaf2;
-  color: #333;
-  border-radius: 20px;
-  cursor: pointer;
-  font-weight: 600;
+.empty-icon{ font-size:28px; }
+.btn-empty{
+  margin-top:4px; text-decoration:none; color:#fff; background:#514EF3; border:1px solid #4A47E6;
+  padding:8px 14px; border-radius:10px; font-weight:700;
 }
-
-.tab.active {
-  background: #3283fd;
-  color: white;
-}
-
-.schedule-slider {
-  display: flex;
-  align-items: center;
-}
-
-.slide-button {
-  background: none;
-  border: none;
-  font-size: 24px;
-  cursor: pointer;
-  color: #333;
-}
-
-.slide-window {
-  overflow: hidden;
-  flex: 1;
-}
-
-.slide-track {
-  display: flex;
-  gap: 16px;
-  padding: 0 16px;
-}
-
-.match-card {
-  background: white;
-  border-radius: 12px;
-  padding: 16px;
-  width: 200px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-
-.match-status {
-  font-weight: bold;
-  margin-bottom: 4px;
-}
-
-.match-league {
-  font-size: 12px;
-  color: #888;
-  margin-bottom: 8px;
-}
-
-.team-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 4px;
-}
-
-.team-row img {
-  width: 24px;
-  height: 24px;
-}
-
-/* --- 하단 뉴스 섹션 --- */
-.news-section {
-  padding: 20px 0;
-}
-
-.news-section h2 {
-  font-size: 24px;
-  font-weight: 700;
-  margin-bottom: 16px;
-}
-
-.highlight {
-  color: #3283fd;
-}
-
-.news-main-link {
-  display: block;
-  margin-bottom: 32px;
-  text-decoration: none;
-  color: inherit;
-}
-
-.news-main {
-  display: flex;
-  gap: 20px;
-  align-items: center;
-}
-
-.news-main-img {
-  width: 200px;
-  height: 150px;
-  border-radius: 8px;
-  object-fit: cover;
-}
-
-.news-main-title {
-  font-size: 20px;
-  font-weight: bold;
-  margin-bottom: 8px;
-}
-
-.news-main-reporter,
-.news-main-views {
-  font-size: 14px;
-  color: #555;
-}
-
-.news-sub-list {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.news-sub-item {
-  display: flex;
-  gap: 12px;
-  text-decoration: none;
-  color: inherit;
-  background: white;
-  padding: 12px;
-  border-radius: 8px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
-}
-
-.news-thumb {
-  width: 72px;
-  height: 72px;
-  object-fit: cover;
-  border-radius: 6px;
-}
-
-.news-sub-title {
-  font-weight: 600;
-  margin-bottom: 4px;
-}
-
-.news-sub-reporter,
-.news-sub-views {
-  font-size: 13px;
-  color: #666;
-}
-
-/* --- 태그 (자동 생성 예정) --- */
-.tag-list {
-  margin-top: 12px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.tag {
-  background: #deeffb;
-  color: #1f2937;
-  font-size: 13px;
-  padding: 6px 14px;
-  border-radius: 999px;
-  font-weight: 500;
-  line-height: 1;
-}
-
-.tag:hover {
-  background: #c7e6ff;
-}
-/* --- 메인 기사 --- */
-.news-main {
-  display: flex;
-  flex-direction: row;
-  gap: 20px;
-  padding: 20px;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  align-items: center;
-  transition: transform 0.2s ease;
-}
-
-.news-main:hover {
-  transform: translateY(-4px);
-}
-
-.news-main-img {
-  width: 240px;
-  height: 160px;
-  object-fit: cover;
-  border-radius: 10px;
-  flex-shrink: 0;
-}
-
-.news-main-title {
-  font-size: 20px;
-  font-weight: 700;
-  margin-bottom: 8px;
-  color: #1f2937;
-}
-
-.news-main-reporter,
-.news-main-views {
-  font-size: 14px;
-  color: #555;
-}
-
-/* ===== 레이아웃 ===== */
-.content-grid {
-  display: flex;
-  gap: 24px;
-  align-items: flex-start;
-  margin-top: 50px;
-}
-
-.main-column {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.right-column {
-  flex: 0 0 340px; /* 우측 폭 */
-}
-
-.right-sticky {
-  position: sticky;
-  top: 96px; /* 헤더 높이에 맞춰 고정 */
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
+.btn-empty:hover{ filter:brightness(1.05); }
 
 /* ===== 우측 카드 공통 ===== */
-.right-card {
-  background: #ffffff;
-  border: 1px solid #e9ecef;
-  border-radius: 14px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.04);
-  padding: 14px 16px;
-}
-
-.right-card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 10px;
-}
-
-.right-card h3 {
-  font-size: 16px;
-  font-weight: 700;
-  margin: 0;
-}
-
-.mini-link {
-  background: transparent;
-  border: none;
-  font-size: 12px;
-  color: #4a72ff;
-  cursor: pointer;
-  padding: 4px 6px;
-}
-.mini-link:hover { text-decoration: underline; }
-
-/* ===== 기록 리스트 ===== */
-.record-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 10px;
-}
-.record-item {
-  border: 1px dashed #e8edf7;
-  border-radius: 10px;
-  padding: 10px;
-  background: #f9fbff;
-}
-.record-title { font-weight: 600; margin-bottom: 4px; }
-.record-detail { font-size: 12px; color: #667085; }
-.record-tag {
-  display: inline-block;
-  margin-top: 6px;
-  font-size: 11px;
-  padding: 3px 8px;
-  background: #eef2ff;
-  color: #4a72ff;
-  border-radius: 999px;
-}
-
-/* ===== 토픽 리스트 ===== */
-.topic-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 10px;
-}
-.topic-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.topic-text { flex: 1; font-size: 14px; }
-.topic-heat {
-  font-size: 12px;
-  padding: 4px 8px;
-  border-radius: 999px;
-  background: #fff3e8;
-  color: #ff8a00;
-  border: 1px solid #ffd9b3;
-}
-
-/* ===== 저장함 ===== */
-.saved-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 8px;
-}
-.saved-item .saved-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  text-decoration: none;
-  color: #111827;
-  font-size: 14px;
-}
-.saved-item .saved-link:hover { text-decoration: underline; }
-.saved-empty {
-  font-size: 13px;
-  color: #6b7280;
-}
-.dot {
-  width: 6px;
-  height: 6px;
-  background: #4a72ff;
-  border-radius: 50%;
-  display: inline-block;
-}
-
-/* ===== 반응형 ===== */
-@media (max-width: 1120px) {
-  .right-column { display: none; } /* 좁은 화면에서는 자동 숨김 */
-}
-
-/* 메인+사이드 2열 레이아웃 */
-.content-grid{
-  display: grid;
-  grid-template-columns: 1fr 320px; /* 메인 1fr, 우측 320px */
-  gap: 20px;
-  max-width: 1200px;
-  margin: 24px auto;
-  padding: 0 16px;
-}
-
-/* 오른쪽 컬럼 */
-.right-column{ min-width: 280px; }
-
-/* 스티키 카드 영역 (헤더 높이에 맞춰 top 조정) */
-.right-sticky{ position: sticky; top: 90px; }
-
-/* 공통 카드 */
 .right-card{
-  background: #fff;
-  border: 1px solid #EAEEF4;
-  border-radius: 12px;
-  padding: 14px 16px;
-  margin-bottom: 16px;
-  box-shadow: 0 2px 10px rgba(0,0,0,.04);
+  background:#fff; border:1px solid #EAEEF4; border-radius:12px;
+  padding:14px 16px; margin-bottom:16px; box-shadow:0 2px 10px rgba(0,0,0,.04);
 }
+.right-card-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+.right-card h3{ font-size:16px; font-weight:800; margin:0; }
+.mini-link{ background:none; border:none; color:#514EF3; cursor:pointer; font-size:.9rem; padding:4px 6px; }
+.mini-link:hover{ text-decoration:underline; }
 
-.right-card-header{
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 10px;
-}
-.mini-link{
-  background: none; border: none; color: #514EF3; cursor: pointer; font-size: .9rem;
-}
+/* 기록 */
+.record-list{ list-style:none; padding:0; margin:0; display:grid; gap:10px; }
+.record-item{ padding:10px; border:1px dashed #EDF1F6; border-radius:10px; background:#f9fbff; }
+.record-title{ font-weight:700; }
+.record-detail{ font-size:12px; color:#667085; margin-top:2px; }
+.record-tag{ display:inline-block; margin-top:6px; font-size:11px; padding:3px 8px; background:#eef2ff; color:#4a72ff; border-radius:999px; }
 
-.record-list, .topic-list, .saved-list{
-  list-style: none; padding: 0; margin: 0;
-}
-.record-item{ padding: 8px 0; border-bottom: 1px dashed #EDF1F6; }
-.record-item:last-child{ border-bottom: none; }
-.record-title{ font-weight: 600; }
-.record-detail{ font-size: .9rem; color: #66768A; margin-top: 2px; }
-.record-tag{ font-size: .75rem; color: #8B99AB; background: #F3F6FB; padding: 2px 8px; border-radius: 999px; }
-
-/* 이슈 토픽 */
-.topic-item{
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 8px 0; border-bottom: 1px dashed #EDF1F6;
-}
-.topic-item:last-child{ border-bottom: none; }
-.topic-text{ font-size: .95rem; }
-.topic-heat{ font-weight: 700; color: #ff6a00; }
+/* 토픽 */
+.topic-list{ list-style:none; padding:0; margin:0; display:grid; gap:10px; }
+.topic-item{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.topic-text{ flex:1; font-size:14px; }
+.topic-heat{ font-size:12px; padding:4px 8px; border-radius:999px; background:#fff3e8; color:#ff8a00; border:1px solid #ffd9b3; }
 
 /* 저장함 */
-.saved-item{ padding: 8px 0; border-bottom: 1px dashed #EDF1F6; }
-.saved-item:last-child{ border-bottom: none; }
-.saved-link{ text-decoration: none; color: #0F2940; }
-.saved-link:hover .dot{ background: #514EF3; }
-.dot{ display: inline-block; width: 6px; height: 6px; background: #B3C0D4; border-radius: 50%; margin-right: 6px; }
-.saved-empty{ color: #8B99AB; font-size: .9rem; padding: 6px 0; }
+.saved-list{ list-style:none; padding:0; margin:0; display:grid; gap:8px; }
+.saved-item{ border-bottom:1px dashed #EDF1F6; padding:8px 0; }
+.saved-item:last-child{ border-bottom:none; }
+.saved-link{ text-decoration:none; color:#0F2940; display:inline-flex; align-items:center; gap:8px; }
+.saved-link:hover .dot{ background:#514EF3; }
+.saved-empty{ color:#8B99AB; font-size:.9rem; padding:6px 0; }
+.dot{ width:6px; height:6px; background:#B3C0D4; border-radius:50%; display:inline-block; }
 
-/* 반응형: 모바일에서 1열로 쌓기 */
-@media (max-width: 900px){
+/* ===== 반응형 ===== */
+@media (max-width: 1120px){
   .content-grid{ grid-template-columns: 1fr; }
-  .right-sticky{ position: static; top: auto; }
+  .right-sticky{ position:static; top:auto; }
+}
+@media (max-width: 768px){
+  .news-main{ flex-direction:column; align-items:stretch; }
+  .news-main-img{ width:100%; height: clamp(160px, 40vw, 220px); }
+}
+
+
+/* 페이지 단위 슬라이드 트랙 */
+.slide-track.slide-track--paged {
+  display: flex;
+  transition: transform .35s ease; /* 부드러운 이동 */
+  will-change: transform;
+}
+
+/* 각 페이지(슬라이드) */
+.slide-page {
+  display: flex;
+  gap: 16px;
+  padding: 0 2px;
+  /* width는 inline style로 % 지정됨 */
+}
+
+/* 비활성 버튼 흐리게 */
+.slide-button:disabled {
+  opacity: .5;
+  cursor: not-allowed;
 }

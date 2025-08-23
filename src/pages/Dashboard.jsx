@@ -5,16 +5,21 @@ import 'react-calendar/dist/Calendar.css';
 import '../styles/Dashboard.css';
 import Rightbar from '../components/Rightbar';
 import { useNavigate } from 'react-router-dom';
-import ViewsChart from '../components/ViewsChart'; // ✅ 추가
+import ViewsChart from '../components/ViewsChart';
 
 const Dashboard = () => {
   const [reports, setReports] = useState([]);
   const [recentGames, setRecentGames] = useState([]);
   const [selectedDate, setSelectedDate] = useState(null);
 
-  // ✅ 차트용 상태
+  // 차트 상태
   const [filter, setFilter] = useState('7days');
   const [chartData, setChartData] = useState([]);
+
+  // UI 상태
+  const [q, setQ] = useState('');
+  const [activeTeams, setActiveTeams] = useState([]); // 칩 필터
+  const [favoriteTeams, setFavoriteTeams] = useState([]); // 즐겨찾기
 
   const navigate = useNavigate();
 
@@ -31,47 +36,71 @@ const Dashboard = () => {
     { name: 'KT WIZ', logo: '/assets/KT.png' },
   ];
 
-  // (선택) 안 쓰면 워닝 나니 필요 없으면 지워도 됨
-  const getLogo = teamName => {
-    const team = baseballTeams.find(t => t.name === teamName);
+  const getLogo = (teamName) => {
+    const team = baseballTeams.find((t) => t.name === teamName);
     return team ? team.logo : '';
-  };
+    };
 
-  useEffect(() => {
-    const stored = JSON.parse(localStorage.getItem('saved_files')) || [];
-    const withDates = stored.map(r => ({
-      ...r,
-      date: r.date
-        ? r.date
-        : (r.createdAt || r.timestamp)
-          ? new Date(r.createdAt || r.timestamp).toISOString().slice(0, 10)
-          : new Date().toISOString().slice(0, 10),
-    }));
-    setReports(withDates);
+  // 초기 로드
+ useEffect(() => {
+  const stored = JSON.parse(localStorage.getItem('saved_files') || '[]');
 
-    const storedGames = JSON.parse(localStorage.getItem('recentGames')) || [
+  // ✅ id 없는 기사 보정
+  let mutated = false;
+  const normalized = stored.map(a => {
+    if (!a.id) {
+      mutated = true;
+      return { ...a, id: Date.now() + Math.floor(Math.random() * 1000) };
+    }
+    return a;
+  });
+  if (mutated) {
+    localStorage.setItem('saved_files', JSON.stringify(normalized));
+  }
+
+  // 날짜/조회/팀 필드 정규화
+  const withDates = normalized.map((r) => ({
+    ...r,
+    date: r.date
+      ? r.date
+      : (r.createdAt || r.timestamp)
+      ? new Date(r.createdAt || r.timestamp).toISOString().slice(0, 10)
+      : new Date().toISOString().slice(0, 10),
+    views: r.views ?? 1,
+    team: r.team || r.tag || '',
+  }));
+  setReports(withDates);
+
+  // 최근 경기
+  const storedGames =
+    JSON.parse(localStorage.getItem('recentGames') || '[]');
+  if (storedGames.length) {
+    setRecentGames(storedGames);
+  } else {
+    setRecentGames([
       { date: '2025-07-14', home: '한화 이글스', homeScore: 4, away: '롯데 자이언츠', awayScore: 2 },
       { date: '2025-07-13', home: 'LG 트윈스', homeScore: 3, away: '키움 히어로즈', awayScore: 5 },
       { date: '2025-07-12', home: '두산 베어스', homeScore: 2, away: '삼성 라이온즈', awayScore: 1 },
-    ];
-    setRecentGames(storedGames);
-  }, []);
+    ]);
+  }
 
-  // ✅ reports → 차트 데이터로 변환
+  // 즐겨찾기 팀
+  setFavoriteTeams(JSON.parse(localStorage.getItem('favoriteTeams') || '[]'));
+}, []);
+
+  // 차트 데이터 빌드
   const buildChartData = (list, f) => {
-    // views 필드가 있으면 합계, 없으면 "기사 수"로 대체
     const parse = (d) => (typeof d === 'string' ? new Date(d) : d);
     const toYMD = (d) => d.toISOString().slice(0, 10);
-    const toYM  = (d) => d.toISOString().slice(0, 7);
+    const toYM = (d) => d.toISOString().slice(0, 7);
 
     if (f === '7days') {
-      // 최근 7일
       const today = new Date();
       const days = [...Array(7)].map((_, i) => {
         const d = new Date(today);
         d.setDate(today.getDate() - (6 - i));
         const key = toYMD(d);
-        const dayItems = list.filter(r => toYMD(parse(r.date)) === key);
+        const dayItems = list.filter((r) => toYMD(parse(r.date)) === key);
         const views = dayItems.reduce((sum, r) => sum + (r.views || 1), 0);
         return { date: key, views };
       });
@@ -79,21 +108,19 @@ const Dashboard = () => {
     }
 
     if (f === 'month') {
-      // 최근 6개월 월별
       const today = new Date();
       const months = [...Array(6)].map((_, i) => {
         const d = new Date(today.getFullYear(), today.getMonth() - (5 - i), 1);
         const key = toYM(d);
-        const monthItems = list.filter(r => toYM(parse(r.date)) === key);
+        const monthItems = list.filter((r) => toYM(parse(r.date)) === key);
         const views = monthItems.reduce((sum, r) => sum + (r.views || 1), 0);
         return { date: key, views };
       });
       return months;
     }
 
-    // all: 전체 기간 일자별 합
     const byDay = {};
-    list.forEach(r => {
+    list.forEach((r) => {
       const key = toYMD(parse(r.date));
       byDay[key] = (byDay[key] || 0) + (r.views || 1);
     });
@@ -102,25 +129,65 @@ const Dashboard = () => {
       .map(([date, views]) => ({ date, views }));
   };
 
-  // reports/필터 변경시 차트 갱신
+  // 필터링된 기사 리스트 (검색어 + 팀 칩)
+  const filteredReports = useMemo(() => {
+    const byTeam = activeTeams.length
+      ? reports.filter((r) => activeTeams.includes(r.team))
+      : reports;
+    if (!q.trim()) return byTeam;
+    const keyword = q.trim().toLowerCase();
+    return byTeam.filter(
+      (r) =>
+        (r.title || '').toLowerCase().includes(keyword) ||
+        (r.content || '').toLowerCase().includes(keyword) ||
+        (r.team || '').toLowerCase().includes(keyword)
+    );
+  }, [reports, q, activeTeams]);
+
+  // 차트: 필터링된 리스트 기준으로
   useEffect(() => {
-    setChartData(buildChartData(reports, filter));
-  }, [reports, filter]);
+    setChartData(buildChartData(filteredReports, filter));
+  }, [filteredReports, filter]);
 
-  const handleDateClick = date => setSelectedDate(date);
+  // KPI 계산
+  const kpis = useMemo(() => {
+    const total = reports.length;
+    const today = new Date();
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - ((today.getDay() + 6) % 7)); // 월요일 시작
+    const thisWeek = reports.filter(
+      (r) => new Date(r.date) >= new Date(startOfWeek.toDateString())
+    ).length;
 
+    const last7 = buildChartData(reports, '7days');
+    const last7Views = last7.reduce((s, d) => s + d.views, 0);
+    const avg = total ? Math.round((reports.reduce((s, r) => s + (r.views || 1), 0) / total) * 10) / 10 : 0;
+
+    return [
+      { key: 'total', label: '전체 기사', value: total, icon: '📝' },
+      { key: 'week', label: '이번 주 작성', value: thisWeek, icon: '📅' },
+      { key: 'views', label: '최근 7일 조회', value: last7Views, icon: '📈' },
+      { key: 'avg', label: '평균 조회/기사', value: avg, icon: '⭐' },
+    ];
+  }, [reports]);
+
+  // 날짜 선택
+  const handleDateClick = (date) => setSelectedDate(date);
+
+  // 캘린더 타일 렌더
   const tileContent = ({ date, view }) => {
     if (view !== 'month') return null;
     const dateStr = date.toISOString().slice(0, 10);
-    const dayReports = reports.filter(r => r.date === dateStr);
+    const dayReports = filteredReports.filter((r) => r.date === dateStr);
     if (!dayReports.length) return null;
     return (
       <div className="calendar-tile-content">
-        {dayReports.map((a, i) => (
+        {dayReports.slice(0, 2).map((a, i) => (
           <div key={i} className="calendar-article">
             {a.title}
           </div>
         ))}
+        {dayReports.length > 2 && <div className="calendar-more">+{dayReports.length - 2}</div>}
       </div>
     );
   };
@@ -128,102 +195,225 @@ const Dashboard = () => {
   const tileClassName = ({ date, view }) => {
     if (view !== 'month') return null;
     const dateStr = date.toISOString().slice(0, 10);
-    return reports.some(r => r.date === dateStr) ? 'has-article' : null;
+    return filteredReports.some((r) => r.date === dateStr) ? 'has-article' : null;
   };
 
   const selectedDateStr = selectedDate?.toISOString().slice(0, 10);
   const selectedReports = selectedDateStr
-    ? reports.filter(r => r.date === selectedDateStr)
+    ? filteredReports.filter((r) => r.date === selectedDateStr)
     : [];
+
+  // 즐겨찾기 토글
+  const toggleFavorite = (teamName) => {
+    let next = favoriteTeams.includes(teamName)
+      ? favoriteTeams.filter((t) => t !== teamName)
+      : [...favoriteTeams, teamName];
+    setFavoriteTeams(next);
+    localStorage.setItem('favoriteTeams', JSON.stringify(next));
+  };
+
+  // 다가오는 경기 (오늘 이후)
+  const upcomingGames = useMemo(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    return recentGames
+      .filter((g) => g.date >= today)
+      .sort((a, b) => (a.date > b.date ? 1 : -1))
+      .slice(0, 5);
+  }, [recentGames]);
+
+  // 팀 칩 클릭
+  const toggleTeamChip = (team) => {
+    setActiveTeams((prev) =>
+      prev.includes(team) ? prev.filter((t) => t !== team) : [...prev, team]
+    );
+  };
+
+  // 빠른 템플릿
+  const createDraft = (template) => {
+    const title = template === 'review' ? '경기 리뷰 초안' : template === 'preview' ? '경기 프리뷰 초안' : '속보 초안';
+    localStorage.setItem('edit_subject', title);
+    localStorage.setItem('edit_content', '');
+    navigate('/result');
+  };
 
   return (
     <div className="dashboard-container">
       <div className="dashboard-main">
-        <h2>⚾ 오늘의 야구 뉴스 & 경기 일정</h2>
-        <div className="calendar-card">
-          <Calendar
-            value={selectedDate}
-            onChange={setSelectedDate}
-            onClickDay={handleDateClick}
-            locale="ko-KR"
-            tileContent={tileContent}
-            tileClassName={tileClassName}
-          />
-          {selectedReports.length > 0 && (
-            <div className="date-articles-popup">
-              <h3>{selectedDateStr} 작성된 기사</h3>
-              <div className="date-articles-list">
-                {selectedReports.map((a, i) => (
-                  <div
-                    key={i}
-                    className="date-article-card"
-                    onClick={() => {
-                      localStorage.setItem('edit_subject', a.title);
-                      localStorage.setItem('edit_content', a.content);
-                      navigate('/result');
-                    }}
-                  >
-                    <div className="date-article-title">{a.title}</div>
-                    <div className="date-article-snippet">
-                      {(a.content || '').slice(0, 60).trim()}…
-                    </div>
-                  </div>
-                ))}
+        {/* 헤더 / 액션 */}
+        <div className="dash-header">
+          <div>
+            <h2>⚾ 스포츠 에디터 대시보드</h2>
+            <p className="subtitle">오늘 할 일과 데이터 한눈에 보기</p>
+          </div>
+
+          <div className="actions">
+            <div className="search">
+              <input
+                placeholder="기사·팀·키워드 검색..."
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+              />
+              {q && <button className="ghost" onClick={() => setQ('')}>지우기</button>}
+            </div>
+            <div className="quick-buttons">
+              <button className="primary" onClick={() => createDraft('breaking')}>+ 새 기사</button>
+              <div className="dropdown">
+                <button className="ghost">템플릿</button>
+                <div className="menu">
+                  <div onClick={() => createDraft('preview')}>경기 프리뷰</div>
+                  <div onClick={() => createDraft('review')}>경기 리뷰</div>
+                  <div onClick={() => createDraft('breaking')}>속보</div>
+                </div>
               </div>
             </div>
-          )}
-        </div>
-
-        <div className="teams-card">
-          <h3>2025 KBO 야구팀</h3>
-          <div className="teams-grid">
-            {baseballTeams.map((team, idx) => (
-              <div key={idx} className="team-item">
-                <img src={team.logo} alt={team.name} className="team-logo" />
-                <span>{team.name}</span>
-              </div>
-            ))}
           </div>
         </div>
-      </div>
 
-      {/* ✅ Rightbar에 ViewsChart 추가 */}
-      <Rightbar>
-        <div className="articles-card">
-          <h3>📰 최신 기사</h3>
-          {reports.slice(0, 3).map((article, idx) => (
-            <div
-              key={idx}
-              className="article"
-              onClick={() => {
-                localStorage.setItem('edit_subject', article.title);
-                localStorage.setItem('edit_content', article.content);
-                navigate('/result');
-              }}
-            >
-              <div className="article-title">{article.title}</div>
-              <div className="article-date">{article.date}</div>
+        {/* KPI 카드 */}
+        <div className="kpi-grid">
+          {kpis.map((k) => (
+            <div className="kpi-card" key={k.key}>
+              <div className="kpi-icon">{k.icon}</div>
+              <div className="kpi-meta">
+                <div className="kpi-label">{k.label}</div>
+                <div className="kpi-value">{k.value}</div>
+              </div>
             </div>
           ))}
         </div>
 
-        {/* 조회수 라인차트 (recharts) */}
-        <ViewsChart data={chartData} filter={filter} setFilter={setFilter} />
-
-        {/* (선택) 최근 경기 결과 박스 */}
-        <div className="recent-games-card">
-          <h3>최근 경기 결과</h3>
-          <ul>
-            {recentGames.map((g, i) => (
-              <li key={`${g.date}-${i}`}>
-                <span className="rg-date">{g.date}</span>
-                <span className="rg-home">{g.home} {g.homeScore}</span>
-                <span className="rg-away">{g.awayScore} {g.away}</span>
-              </li>
-            ))}
-          </ul>
+        {/* 팀 필터 + 즐겨찾기 */}
+        <div className="team-filter-card">
+          <div className="filter-header">
+            <h3>팀 필터</h3>
+            <div className="filter-actions">
+              <button className="ghost" onClick={() => setActiveTeams([])}>모두 해제</button>
+              <button
+                className="ghost"
+                onClick={() => setActiveTeams(favoriteTeams)}
+                title="즐겨찾기 적용"
+              >
+                ★ 즐겨찾기
+              </button>
+            </div>
+          </div>
+          <div className="chips">
+            {baseballTeams.map((team) => {
+              const active = activeTeams.includes(team.name);
+              const fav = favoriteTeams.includes(team.name);
+              return (
+                <button
+                  key={team.name}
+                  className={`chip ${active ? 'active' : ''}`}
+                  onClick={() => toggleTeamChip(team.name)}
+                  title={team.name}
+                >
+                  <img src={team.logo} alt={team.name} />
+                  <span>{team.name}</span>
+                  <span
+                
+                    className={`star ${fav ? 'on' : ''}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleFavorite(team.name);
+                    }}
+                    title={fav ? '즐겨찾기 해제' : '즐겨찾기 추가'}
+                  >
+                    ★
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </Rightbar>
+
+        {/* 본문 2열: 캘린더 / 팀 목록 */}
+        <div className="grid-2">
+          <div className="calendar-card">
+            <h3>캘린더</h3>
+            <Calendar
+              value={selectedDate}
+              onChange={setSelectedDate}
+              onClickDay={handleDateClick}
+              locale="ko-KR"
+              tileContent={tileContent}
+              tileClassName={tileClassName}
+            />
+           {/* 날짜별 기사 팝업 */}
+{selectedReports.length > 0 && (
+  <div className="date-articles-popup">
+    <h3>{selectedDateStr} 작성된 기사</h3>
+    <div className="date-articles-list">
+      {selectedReports.map((a, i) => (
+        <div
+          key={i}
+          className="date-article-card"
+          onClick={() => {
+            // id가 없는 기존 데이터 대비: 없으면 에디터로
+            if (a.id) {
+              navigate(`/platform/article/${a.id}`);
+            } else {
+              localStorage.setItem('edit_subject', a.title || '');
+              localStorage.setItem('edit_content', a.content || '');
+              navigate('/result');
+            }
+          }}
+        >
+          <div className="date-article-title">{a.title}</div>
+          <div className="date-article-snippet">
+            {(a.content || '').slice(0, 60).trim()}…
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+)}
+
+          </div>
+
+          <div className="teams-card">
+            <h3>2025 KBO 야구팀</h3>
+            <div className="teams-grid">
+              {baseballTeams.map((team) => (
+                <div key={team.name} className="team-item">
+                  <img src={team.logo} alt={team.name} className="team-logo" />
+                  <span>{team.name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* 조회수 차트 */}
+        <div className="views-chart-card">
+          <h3>조회 추이</h3>
+          <ViewsChart data={chartData} filter={filter} setFilter={setFilter} />
+        </div>
+
+        {/* 다가오는 경기 */}
+        <div className="upcoming-card">
+          <h3>다가오는 경기</h3>
+          {upcomingGames.length ? (
+            <ul className="upcoming-list">
+              {upcomingGames.map((g, i) => (
+                <li key={`${g.date}-${i}`} className="upcoming-item">
+                  <span className="u-date">{g.date}</span>
+                  <span className="u-teams">
+                    <img src={getLogo(g.home)} alt={g.home} className="team-logo-sm" />
+                    {g.home} <span className="vs">vs</span>
+                    <img src={getLogo(g.away)} alt={g.away} className="team-logo-sm" />
+                    {g.away}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="empty">예정된 경기가 없어요. 일정 데이터를 넣어보세요.</div>
+          )}
+        </div>
+      </div>
+
+      
     </div>
   );
 };

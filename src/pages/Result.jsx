@@ -58,38 +58,48 @@ const Result = () => {
     setEditableDept(userInfo.department || '');
   }, [userInfo]);
 
-  const handleSaveClick = () => {
-    setIsEditing(false);
+ // ✅ 교체: 저장하고 /platform/article/:id 로 이동
+const handleSaveClick = () => {
+  setIsEditing(false);
 
-    const existing = JSON.parse(localStorage.getItem('saved_files') || '[]');
+  const existing = JSON.parse(localStorage.getItem('saved_files') || '[]');
+
   const newArticle = {
-    id: Date.now(),
-    title: reportTitle,
-    content: reportContent,
-    date: editableDate,
-    reporter: editableName,
-    department: editableDept,
+    id: Date.now(),                       // 상세페이지 라우팅용 고유 ID
+    title: reportTitle || '제목 없음',
+    content: reportContent || '',
+    date: editableDate || new Date().toISOString().slice(0,10),
+    reporter: editableName || (userInfo ? `${userInfo.firstName}${userInfo.lastName}` : '기자 미상'),
+    department: editableDept || '',
     email: userInfo?.email || '',
-    image: imageUrl || '',  // <-- null일 경우도 대비
+    image: imageUrl || '',                // 이미지가 없으면 '' 저장
     tags: ['스포츠', '속보'],
-    views: 0
+    views: 0,
   };
-    localStorage.setItem('saved_files', JSON.stringify(existing));
 
-    localStorage.setItem('edit_subject', reportTitle);
-    localStorage.setItem('edit_content', reportContent);
+  // 맨 앞에 추가(최근 저장 우선)
+  const nextList = [newArticle, ...existing];
+  localStorage.setItem('saved_files', JSON.stringify(nextList));
 
-    const updatedUser = {
-      ...userInfo,
-      firstName: editableName.charAt(0),
-      lastName: editableName.slice(1),
-      department: editableDept
-    };
-    setUserInfo(updatedUser);
-    localStorage.setItem('user_info', JSON.stringify(updatedUser));
+  // 에디터 폼 복귀 대비(선택)
+  localStorage.setItem('edit_subject', newArticle.title);
+  localStorage.setItem('edit_content', newArticle.content);
 
-    alert('저장되었습니다!');
+  // 사용자 정보(선택): 이름을 한 글자/나머지로 쪼개던 로직 유지
+  const updatedUser = {
+    ...userInfo,
+    firstName: (editableName || '').charAt(0) || userInfo?.firstName || '',
+    lastName: (editableName || '').slice(1) || userInfo?.lastName || '',
+    department: editableDept || userInfo?.department || '',
   };
+  setUserInfo(updatedUser);
+  localStorage.setItem('user_info', JSON.stringify(updatedUser));
+
+  alert('저장되었습니다!');
+  // ✅ 바로 상세 페이지로 이동
+  navigate(`/platform/article/${newArticle.id}`);
+};
+
 
   const createPdfInstance = () => {
     const pdf = new jsPDF('p', 'pt', 'a4');
