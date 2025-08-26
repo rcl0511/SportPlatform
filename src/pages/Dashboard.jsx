@@ -323,8 +323,8 @@ const Dashboard = () => {
         {/* 헤더 / 액션 */}
         <div className="dash-header">
           <div>
-            <h2>⚾ 스포츠 에디터 대시보드</h2>
-            <p className="subtitle">오늘 할 일과 데이터 한눈에 보기</p>
+            <h2>스포츠 에디터 대시보드</h2>
+            
           </div>
 
           <div className="actions">

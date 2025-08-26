@@ -32,16 +32,18 @@
 .slide-window{ overflow:hidden; }
 .slide-track{ display:flex; gap:16px; padding:0 2px; }
 
-/* 카드: 페이지 그리드 칸을 꽉 채우도록 width:auto */
 .match-card{
-  background:#fff; border-radius:12px; padding:14px;
-  width: auto;            /* ⬅️ 고정/클램프 폭 제거 */
-  min-width: 0;           /* 그리드 내에서 줄바꿈 허용 */
+  background:#fff; 
+  border-radius:12px; 
+  padding:14px;
+  width: clamp(160px, 18vw, 220px);  /* 카드 반응형 너비 */
   box-shadow: 0 2px 8px rgba(0,0,0,.05);
+  flex:0 0 auto;
 }
 
-/* 페이지를 채우기 위한 플레이스홀더(자리만 차지, 화면엔 안보임) */
-.match-card.placeholder{ visibility: hidden; }
+.match-card.placeholder{ 
+  opacity:.25; 
+}
 
 .match-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
 .match-status{ font-weight:800; display:flex; align-items:center; gap:6px; }
