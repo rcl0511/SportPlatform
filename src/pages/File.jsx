@@ -7,43 +7,60 @@ const FileList = () => {
   const navigate = useNavigate();
   const [files, setFiles] = useState([]);
 
+  // 최초 로드 + 조회수 필드 정규화
   useEffect(() => {
-    const storedFiles = JSON.parse(localStorage.getItem('saved_files')) || [];
-    setFiles(storedFiles);
+    const raw = JSON.parse(localStorage.getItem('saved_files')) || [];
+    let mutated = false;
+    const normalized = raw.map(f => {
+      if (typeof f.views !== 'number' || !Number.isFinite(f.views)) {
+        mutated = true;
+        return { ...f, views: 0 };
+      }
+      return f;
+    });
+    setFiles(normalized);
+    if (mutated) {
+      localStorage.setItem('saved_files', JSON.stringify(normalized));
+    }
   }, []);
 
-  
   const handleDelete = (fileId) => {
-    const confirmDelete = window.confirm('정말 이 파일을 삭제하시겠습니까?');
-    if (!confirmDelete) return; // 취소 누르면 아무것도 안 함
-  
-    const updatedFiles = files.filter(file => file.id !== fileId);
-    setFiles(updatedFiles);
-    localStorage.setItem('saved_files', JSON.stringify(updatedFiles));
+    const ok = window.confirm('정말 이 파일을 삭제하시겠습니까?');
+    if (!ok) return;
+    const updated = files.filter(f => f.id !== fileId);
+    setFiles(updated);
+    localStorage.setItem('saved_files', JSON.stringify(updated));
   };
 
   const handleDownload = (file) => {
     const element = document.createElement('a');
-    const fileBlob = new Blob([file.content], { type: 'text/plain' });
+    const fileBlob = new Blob([file.content || ''], { type: 'text/plain' });
     element.href = URL.createObjectURL(fileBlob);
-    element.download = `${file.title}.txt`;
+    element.download = `${file.title || 'untitled'}.txt`;
     document.body.appendChild(element);
     element.click();
     document.body.removeChild(element);
   };
 
+  // 파일 열기 + 조회수 +1
   const handleOpenFile = (file) => {
-    localStorage.setItem('edit_subject', file.title);
-    localStorage.setItem('edit_content', file.content);
+    const updated = files.map(f =>
+      f.id === file.id ? { ...f, views: (f.views || 0) + 1 } : f
+    );
+    setFiles(updated);
+    localStorage.setItem('saved_files', JSON.stringify(updated));
+
+    localStorage.setItem('edit_subject', file.title || '');
+    localStorage.setItem('edit_content', file.content || '');
     navigate('/result');
   };
 
   return (
     <div style={{
-        width: 'calc(100% - 90px)',   // 👉 사이드바 제외하고 전체 너비 차지
-        marginLeft: '0px',           // 👉 사이드바 오른쪽부터 시작
-        marginTop: '80px',            // 👉 헤더 높이 고려
-        padding: '0',
+      width: 'calc(100% - 90px)',
+      marginLeft: '0px',
+      marginTop: '80px',
+      padding: '0',
     }}>
       {/* 헤더 */}
       <div style={{
@@ -57,9 +74,10 @@ const FileList = () => {
         borderRadius: '8px',
         color: '#092C4C',
       }}>
-        <div style={{ width: '50%' }}>파일 제목</div>
-        <div style={{ width: '25%', textAlign: 'center' }}>날짜</div>
-        <div style={{ width: '25%', textAlign: 'center' }}>액션</div>
+        <div style={{ width: '60%' }}>기사 제목</div>
+        <div style={{ width: '10%', textAlign: 'center' }}>조회수</div>
+        <div style={{ width: '10%', textAlign: 'center' }}>날짜</div>
+        <div style={{ width: '10%', textAlign: 'center' }}>액션</div>
       </div>
 
       {/* 파일 리스트 */}
@@ -84,32 +102,52 @@ const FileList = () => {
             color: '#092C4C',
             width: '100%',
           }}>
-            {/* 파일 제목 클릭 */}
+            {/* 제목 */}
             <div
-              style={{ 
-                width: '50%', 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '8px', 
-                cursor: 'pointer' 
+              style={{
+                width: '60%',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                cursor: 'pointer',
               }}
               onClick={() => handleOpenFile(file)}
+              title="열기"
             >
               <MdInsertDriveFile size={20} />
-              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {file.title}
+              <span style={{
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap'
+              }}>
+                {file.title || '(제목 없음)'}
               </span>
             </div>
 
-            {/* 날짜 */}
-            <div style={{ width: '25%', textAlign: 'center', fontSize: '14px', color: '#7E92A2' }}>
-              {file.date}
+            {/* 조회수 */}
+            <div style={{ width: '10%', textAlign: 'center', fontSize: '14px', color: '#092C4C' }}>
+              {(file.views ?? 0).toLocaleString()}
             </div>
 
-            {/* 액션 버튼 */}
-            <div style={{ width: '25%', textAlign: 'center', display: 'flex', justifyContent: 'center', gap: '12px' }}>
-              <button onClick={() => handleDownload(file)} style={iconButtonStyle}><MdDownload size={18} /></button>
-              <button onClick={() => handleDelete(file.id)} style={iconButtonStyle}><MdDelete size={18} /></button>
+            {/* 날짜 */}
+            <div style={{ width: '10%', textAlign: 'center', fontSize: '14px', color: '#7E92A2' }}>
+              {file.date || ''}
+            </div>
+
+            {/* 액션 */}
+            <div style={{
+              width: '10%',
+              textAlign: 'center',
+              display: 'flex',
+              justifyContent: 'center',
+              gap: '12px'
+            }}>
+              <button onClick={() => handleDownload(file)} style={iconButtonStyle} title="다운로드">
+                <MdDownload size={18} />
+              </button>
+              <button onClick={() => handleDelete(file.id)} style={iconButtonStyle} title="삭제">
+                <MdDelete size={18} />
+              </button>
             </div>
           </div>
         ))

@@ -106,7 +106,7 @@ export default function ArticleDetail() {
   return (
     <div className="article-wrap">
       <div className="article-header">
-        <Link to="/platform" className="back-link">← 목록으로</Link>
+        <Link to="/" className="back-link">← 목록으로</Link>
       </div>
 
       <article className="article">
@@ -134,8 +134,8 @@ export default function ArticleDetail() {
             </div>
           </div>
           <div className="meta__right">
-            <span>📅 {article.date}</span>
-            <span>👁 {article.views?.toLocaleString()} views</span>
+            <span> {article.date}</span>
+            <span> {article.views?.toLocaleString()} views</span>
           </div>
         </div>
 

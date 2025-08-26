@@ -3,14 +3,14 @@ import React from 'react';
 import { Outlet } from 'react-router-dom';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
-import Logo from '../components/Logo';
+
 import '../styles/layout.css';
 
 const MainLayout = () => {
   return (
     <div className="layout-container">
       <aside className="sidebar-area">
-        <Logo />
+      
         <Sidebar />
       </aside>
       <div className="main-content-area">
