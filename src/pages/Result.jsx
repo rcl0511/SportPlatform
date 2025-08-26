@@ -52,6 +52,27 @@ const Result = () => {
     setReportContent(localStorage.getItem('edit_content') || '내용이 없습니다.');
     setEditableDate(new Date().toISOString().slice(0, 10));
 
+    // AI에서 생성된 태그들 로드 (우선 사용)
+    const aiTagsRaw = localStorage.getItem('edit_tags');
+    console.log('🔍 localStorage에서 읽은 원본 태그 데이터:', aiTagsRaw);
+    
+    const aiTags = JSON.parse(aiTagsRaw || '[]');
+    console.log('🔄 파싱된 AI 태그 배열:', aiTags, '(길이:', aiTags.length, ')');
+    
+    if (aiTags.length > 0) {
+      console.log('🏷️ AI 생성 태그 로드 성공! 태그들:', aiTags);
+      setSuggestedTags(aiTags);
+      setSelectedTags(aiTags.slice(0, 5)); // 처음 5개를 기본 선택
+    } else {
+      console.log('📝 AI 태그가 없어서 로컬 규칙 기반 태그를 사용합니다.');
+    }
+
+    // AI에서 생성된 캡션들 로드 (필요시 활용)
+    const aiCaptions = JSON.parse(localStorage.getItem('edit_captions') || '{}');
+    if (Object.keys(aiCaptions).length > 0) {
+      console.log('💬 AI 생성 캡션:', aiCaptions);
+    }
+
     const img = localStorage.getItem('edit_image');
     if (img) {
       setImageUrl(img);
@@ -120,9 +141,25 @@ const Result = () => {
     };
   }, []);
 
-  // 추천 태그 계산
+  // 추천 태그 계산 (AI 태그가 없을 때만)
   useEffect(() => {
+    // AI 태그가 이미 있으면 로컬 규칙 기반 태그 생성 건너뛰기
+    const aiTagsRaw = localStorage.getItem('edit_tags');
+    const aiTags = JSON.parse(aiTagsRaw || '[]');
+    console.log('🔎 태그 계산 useEffect - localStorage 확인:', { 
+      raw: aiTagsRaw, 
+      parsed: aiTags, 
+      length: aiTags.length 
+    });
+    
+    if (aiTags.length > 0) {
+      console.log('🤖 AI 태그가 있어서 로컬 태그 생성을 건너뜁니다:', aiTags);
+      return;
+    }
+
+    console.log('📋 AI 태그가 없어서 로컬 규칙 기반 태그를 생성합니다.');
     const recs = makeSuggestions(reportTitle, reportContent);
+    console.log('📝 로컬 규칙으로 생성된 태그:', recs);
     setSuggestedTags(recs);
     // 추천 중 상위 3개를 기본 선택값으로 (원하면 0개로 시작해도 OK)
     setSelectedTags((prev) => (prev.length ? prev : recs.slice(0, 3)));
@@ -331,7 +368,12 @@ const Result = () => {
         {/* 🔹 AI 태그 추천/편집 영역 */}
         <div className="tag-editor">
           <div className="tag-editor__row">
-            <h4>추천 태그</h4>
+            <h4>
+              {JSON.parse(localStorage.getItem('edit_tags') || '[]').length > 0 
+                ? '🤖 AI 생성 태그' 
+                : '📋 추천 태그'
+              }
+            </h4>
             <div className="tag-cloud">
               {suggestedTags.map((t) => {
                 const on = selectedTags.includes(t);

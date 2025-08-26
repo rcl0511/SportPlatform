@@ -112,7 +112,7 @@ const Edit = () => {
   };
 
   // 다음 단계로 이동 (파일/요청사항 검증)
-  const handleNextStep = () => {
+  const handleNextStep = async () => {
     if (!subject.trim()) {
       alert('요청사항을 입력해주세요!');
       return;
@@ -121,11 +121,34 @@ const Edit = () => {
       alert('경기 데이터를 반드시 첨부해주세요!');
       return;
     }
+    
     localStorage.setItem('edit_subject', subject);
     localStorage.setItem('edit_tags', JSON.stringify(tags));
     localStorage.setItem('edit_files', JSON.stringify(uploadedFiles.map((f) => f.name)));
 
-    //  Edit2에서도 같은 미리보기 필요 → 파일 자체를 state로 전달
+    // 🔁 첫 번째 파일을 base64로 변환해서 localStorage에 저장
+    if (uploadedFiles.length > 0) {
+      const firstFile = uploadedFiles[0];
+      try {
+        // 파일을 base64로 변환
+        const reader = new FileReader();
+        const base64Promise = new Promise((resolve, reject) => {
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(firstFile);
+        });
+        
+        const base64 = await base64Promise;
+        localStorage.setItem('edit_file', base64);
+        localStorage.setItem('edit_fileName', firstFile.name);
+      } catch (error) {
+        console.error('파일 변환 실패:', error);
+        alert('파일 처리 중 오류가 발생했습니다.');
+        return;
+      }
+    }
+
+    // 🔁 Edit2에서도 같은 미리보기 필요 → 파일 자체를 state로 전달
     navigate('/edit2', {
       state: {
         uploadedFiles, // File[] 전달 → Edit2에서 동일 파싱/미리보기 가능

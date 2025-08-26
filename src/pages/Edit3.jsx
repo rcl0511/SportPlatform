@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AuthContext } from '../contexts/AuthContext.js';
 
@@ -13,7 +13,12 @@ const Edit3 = () => {
   // 리포트 데이터 상태
   const [reportTitle, setReportTitle] = useState('');
   const [reportContent, setReportContent] = useState('');
+  const [reportTags, setReportTags] = useState([]);
+  const [reportCaptions, setReportCaptions] = useState({});
   const [today, setToday] = useState('');
+  
+  // API 호출 중복 방지를 위한 상태
+  const hasGeneratedRef = useRef(false);
 
   // 사이드바 상태
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -30,9 +35,10 @@ const Edit3 = () => {
   const [imageMarginTop, setImageMarginTop] = useState(0);
   const [imageMarginLeft, setImageMarginLeft] = useState(0);
 
-  // 초기 데이터 로딩
+  // 초기 데이터 로딩 및 API 호출 (한번만 실행)
   useEffect(() => {
-    if (topic) setReportTitle(topic);  // 넘겨받은 제목을 우선 적용
+    // 기본 설정
+    if (topic) setReportTitle(topic);
 
     const savedContent = localStorage.getItem('edit_content');
     if (savedContent) setReportContent(savedContent);
@@ -41,39 +47,83 @@ const Edit3 = () => {
       year: 'numeric', month: 'short', day: 'numeric',
     }));
 
-    if (!topic) return;
-
-    const formData = new FormData();
-    formData.append('topic', topic);
-    if (base64 && fileName) {
-      if (base64.startsWith('data:')) {
-        const byteString = atob(base64.split(',')[1]);
-        const mimeString = base64.split(',')[0].split(':')[1].split(';')[0];
-        const ab = new ArrayBuffer(byteString.length);
-        const ia = new Uint8Array(ab);
-        for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
-        formData.append('file', new Blob([ab], { type: mimeString }), fileName);
-      } else {
-        formData.append('file', new Blob([base64], { type: 'text/csv' }), fileName);
-      }
+    // API 호출 조건 체크
+    if (!topic || hasGeneratedRef.current) {
+      return;
     }
 
-    fetch('http://127.0.0.1:8000/api/generate-report', {
-      method: 'POST',
-      body: formData,
-    })
-      .then(res => {
-        if (!res.ok) throw new Error('서버 오류');
-        return res.json();
-      })
-      .then(data => {
+    console.log('보고서 생성 시작 - topic:', topic, 'fileName:', fileName);
+
+    // 중복 호출 방지 플래그 설정
+    hasGeneratedRef.current = true;
+
+    const generateReport = async () => {
+      try {
+        const formData = new FormData();
+        formData.append('topic', topic);
+        
+        if (base64 && fileName) {
+          if (base64.startsWith('data:')) {
+            const byteString = atob(base64.split(',')[1]);
+            const mimeString = base64.split(',')[0].split(':')[1].split(';')[0];
+            const ab = new ArrayBuffer(byteString.length);
+            const ia = new Uint8Array(ab);
+            for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
+            formData.append('file', new Blob([ab], { type: mimeString }), fileName);
+          } else {
+            formData.append('file', new Blob([base64], { type: 'text/csv' }), fileName);
+          }
+        }
+
+        console.log('보고서 생성 API 호출 시작:', topic);
+
+        const response = await fetch('http://127.0.0.1:8000/api/generate-report', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          throw new Error(`서버 오류: ${response.status}`);
+        }
+
+        const data = await response.json();
+        
+        console.log('📦 API 응답 전체 데이터:', data);
+        console.log('🏷️ API 응답 태그 필드:', data.tags);
+        console.log('💬 API 응답 캡션 필드:', data.captions);
+        
         // API에서 제목이 오면 덮어씌움
         if (data.title) setReportTitle(data.title);
         setReportContent(data.content);
+        
+        // 추가 필드들 처리
+        if (data.tags && Array.isArray(data.tags)) {
+          console.log('✅ AI 태그 설정 중:', data.tags);
+          setReportTags(data.tags);
+          localStorage.setItem('edit_tags', JSON.stringify(data.tags));
+          console.log('💾 localStorage에 AI 태그 저장 완료');
+        } else {
+          console.log('❌ AI 태그가 없거나 배열이 아닙니다:', data.tags);
+        }
+        
+        if (data.captions && typeof data.captions === 'object') {
+          console.log('✅ AI 캡션 설정 중:', data.captions);
+          setReportCaptions(data.captions);
+          localStorage.setItem('edit_captions', JSON.stringify(data.captions));
+        } else {
+          console.log('❌ AI 캡션이 없거나 객체가 아닙니다:', data.captions);
+        }
 
-      })
-      .catch(err => console.error('보고서 생성 실패:', err));
-  }, [topic, base64, fileName]);
+        console.log('보고서 생성 완료');
+      } catch (error) {
+        console.error('보고서 생성 실패:', error);
+        // 오류 발생 시에만 플래그 초기화하여 재시도 가능하게 함
+        hasGeneratedRef.current = false;
+      }
+    };
+
+    generateReport();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
 
   const toggleSidebar = () => setIsSidebarOpen(prev => !prev);
@@ -216,8 +266,20 @@ const Edit3 = () => {
       >
 
         <button className="btn" onClick={() => {
+          console.log('🚀 완료하기 버튼 클릭 - 현재 상태:');
+          console.log('📝 reportTitle:', reportTitle);
+          console.log('📄 reportContent:', reportContent);
+          console.log('🏷️ reportTags:', reportTags, '(길이:', reportTags.length, ')');
+          console.log('💬 reportCaptions:', reportCaptions);
+          
           localStorage.setItem('edit_content', reportContent);
           localStorage.setItem('edit_subject', reportTitle);
+          localStorage.setItem('edit_tags', JSON.stringify(reportTags));
+          localStorage.setItem('edit_captions', JSON.stringify(reportCaptions));
+          
+          console.log('💾 localStorage 저장 완료:');
+          console.log('🏷️ 저장된 태그:', localStorage.getItem('edit_tags'));
+          
           if (imageUrl) {
             localStorage.setItem('edit_image', imageUrl);
             localStorage.setItem('edit_image_position', imagePosition);
