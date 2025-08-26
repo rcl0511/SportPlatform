@@ -1,0 +1,142 @@
+/* src/components/FilePreviewPanel.css */
+:root{
+  --fp-bg:#ffffff;
+  --fp-line:#e9eef5;
+  --fp-ink:#0f1e2e;
+  --fp-sub:#6a87a3;
+  --fp-chip:#eef4ff;
+  --fp-primary:#3e71ff;
+  --fp-shadow:0 8px 24px rgba(15,30,46,0.08);
+}
+
+/* 파일 미리보기 카드 컨테이너(부모에서 .file-preview 사용 중) */
+.file-preview{
+  background: var(--fp-bg);
+  border: 1px solid var(--fp-line);
+  border-radius: 14px;
+  box-shadow: var(--fp-shadow);
+  padding: 14px;
+}
+
+/* 이미지 그룹 간격만 살짝 */
+.image-preview-group h4{
+  margin: 0 0 10px;
+  font-size: 14px;
+  color: var(--fp-ink);
+}
+.image-preview-group img{
+  border-radius: 10px;
+  border: 1px solid var(--fp-line);
+  box-shadow: 0 6px 16px rgba(0,0,0,.05);
+}
+
+/* ===== CSV 래퍼(스크롤바 예쁘게) ===== */
+.csv-wrapper{
+  max-height: 280px;
+  overflow: auto;
+  border: 1px solid var(--fp-line);
+  border-radius: 12px;
+  margin-top: 8px;
+  background: linear-gradient(180deg, #fff 0%, #fbfdff 100%);
+  box-shadow: inset 0 1px 0 #fff;
+}
+
+/* 커스텀 스크롤바 (WebKit) */
+.csv-wrapper::-webkit-scrollbar{
+  width: 10px; height: 10px;
+}
+.csv-wrapper::-webkit-scrollbar-track{
+  background: #f5f8ff; border-radius: 10px;
+}
+.csv-wrapper::-webkit-scrollbar-thumb{
+  background: #cfdaf0; border-radius: 10px; border: 2px solid #f5f8ff;
+}
+.csv-wrapper::-webkit-scrollbar-thumb:hover{
+  background: #b9c9ee;
+}
+
+/* ===== 표 ===== */
+.csv-preview{
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+  color: var(--fp-ink);
+  font-size: 13px;
+}
+
+/* 첫 행을 헤더처럼 강조 */
+.csv-preview tr:first-child td{
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: linear-gradient(180deg, #f4f8ff 0%, #ecf3ff 100%);
+  color: #23406a;
+  font-weight: 700;
+  border-bottom: 1px solid #dbe6fb;
+  box-shadow: 0 1px 0 #eaf1ff;
+}
+
+/* 지브라 스트라이프 + 호버 */
+.csv-preview tr:nth-child(odd) td{ background: #fcfeff; }
+.csv-preview tr:nth-child(even) td{ background: #f9fbff; }
+.csv-preview tr:hover td{
+  background: #eef4ff;
+  transition: background .15s ease;
+}
+
+/* 셀 */
+.csv-preview td{
+  border-right: 1px solid #edf2fa;
+  border-bottom: 1px solid #edf2fa;
+  padding: 10px 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.csv-preview tr td:first-child{
+  border-left: 1px solid transparent;
+}
+.csv-preview tr:last-child td{
+  border-bottom: 0;
+}
+
+/* 길어질 때 말풍선 느낌으로 title 툴팁이 보이므로 ellipsis 유지 */
+.csv-preview td[title]{
+  cursor: help;
+}
+
+/* ===== 토글 버튼 ===== */
+.csv-toggle-btn{
+  margin-top: 10px;
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 999px;
+  border: 1px solid #dfe7f1;
+  background: var(--fp-chip);
+  color: #21405e;
+  cursor: pointer;
+  transition: all .15s ease;
+}
+.csv-toggle-btn:hover{
+  background: #dbe8ff;
+  border-color: #cbd9f0;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(62,113,255,0.18);
+}
+
+/* 파일명 텍스트(컴포넌트에서 <strong> 사용) */
+.file-preview strong{
+  display: inline-block;
+  margin: 8px 0 4px;
+  font-size: 13px;
+  color: var(--fp-ink);
+}
+
+/* 작은 화면에서 폰트/패딩 축소 */
+@media (max-width: 640px){
+  .csv-preview{ font-size: 12px; }
+  .csv-preview td{ padding: 8px 10px; }
+  .csv-wrapper{ max-height: 220px; }
+}

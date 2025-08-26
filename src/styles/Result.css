@@ -159,3 +159,124 @@
 .controls button:hover {
   background-color: #2f57c5;
 }
+
+/* === Tag Editor (AI 추천/선택) ========================== */
+.tag-editor {
+  margin-top: 20px;
+  padding: 16px;
+  background: #f8fbff;
+  border: 1px solid #e6eef7;
+  border-radius: 12px;
+}
+
+.tag-editor h4 {
+  margin: 0 0 8px;
+  font-size: 14px;
+  color: #0f3155;
+  letter-spacing: -0.2px;
+}
+
+.tag-editor__row {
+  margin-bottom: 12px;
+}
+
+.tag-cloud,
+.selected-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* 기본 칩 */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 1px solid #dfe7f1;
+  background: #ffffff;
+  color: #274765;
+  border-radius: 999px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: transform 0.06s ease, box-shadow 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+.chip:hover {
+  border-color: #bcd1ea;
+  box-shadow: 0 2px 8px rgba(12, 39, 66, 0.06);
+  transform: translateY(-1px);
+}
+
+/* 선택된 칩 */
+.chip.on {
+  background: #2e6bff;
+  border-color: #2e6bff;
+  color: #ffffff;
+  box-shadow: 0 6px 14px rgba(46, 107, 255, 0.25);
+}
+
+/* 선택된 태그 리스트에서 X 버튼 */
+.chip .chip-close {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+  margin-left: 4px;
+  color: #6b86a0;
+  line-height: 0;
+}
+.chip.on .chip-close { color: #ffffff; }
+.chip .chip-close:hover { opacity: 0.9; }
+
+/* 직접 추가 인풋 */
+.tag-editor__add {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+.tag-editor__add input {
+  flex: 1;
+  min-width: 160px;
+  padding: 10px 12px;
+  border: 1px solid #dfe7f1;
+  border-radius: 10px;
+  background: #ffffff;
+  font-size: 13px;
+  outline: none;
+  color: #0c2742;
+}
+.tag-editor__add input::placeholder { color: #9ab0c6; }
+.tag-editor__add input:focus {
+  border-color: #b8cbe0;
+  box-shadow: 0 0 0 4px rgba(73, 126, 255, 0.12);
+}
+
+/* 추가 버튼 */
+.tag-editor__add button {
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid #2e6bff;
+  background: #2e6bff;
+  color: #ffffff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.06s ease, box-shadow 0.15s ease;
+}
+.tag-editor__add button:hover {
+  box-shadow: 0 6px 14px rgba(46, 107, 255, 0.25);
+  transform: translateY(-1px);
+}
+
+/* 보조 텍스트 */
+.muted {
+  color: #9ab0c6;
+  font-size: 13px;
+}
+
+/* 반응형 */
+@media (max-width: 560px) {
+  .tag-editor__add { flex-direction: column; }
+  .tag-editor__add button { width: 100%; }
+}

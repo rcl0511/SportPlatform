@@ -5,6 +5,7 @@
   position: relative;
   display: flex;
   gap: 0;
+  margin-top: 90px;
 }
 .dashboard-main {
   padding: 28px;
@@ -343,4 +344,111 @@ button.ghost {
   .dash-header { grid-template-columns: 1fr; }
   .actions { justify-content: space-between; }
   .kpi-grid { grid-template-columns: 1fr 1fr; }
+}
+
+.grid-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr; /* 캘린더 / 팀 / 업로드 */
+  gap: 16px;
+}
+.upload-card .upload-label {
+  display: inline-block;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #2e6bff;
+  color: white;
+  cursor: pointer;
+  margin-top: 8px;
+}
+.upload-card .help.small {
+  font-size: 12px;
+  color: #777;
+  margin-top: 6px;
+}
+
+.dropzone {
+  margin-top: 8px;
+  border: 2px dashed #c7d2fe; /* indigo-200 */
+  background: #f8fafc;
+  padding: 18px;
+  border-radius: 10px;
+  text-align: center;
+  color: #475569;
+  transition: all .15s ease;
+}
+.dropzone.over {
+  border-color: #6366f1;     /* indigo-500 */
+  background: #eef2ff;       /* indigo-50 */
+  color: #3730a3;
+}
+.upload-btn {
+  margin-top: 10px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  cursor: pointer;
+}
+.upload-btn:hover { background: #f9fafb; }
+
+
+.upload-card {
+  background: #fff;
+  padding: 22px;
+  border-radius: 14px;
+  box-shadow: 0 2px 10px rgba(10, 28, 58, 0.06);
+  margin-bottom: 26px;
+}
+
+.upload-card h3 {
+  margin: 0 0 10px;
+  color: #0f3155;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.upload-card .help {
+  font-size: 13px;
+  color: #5f7186;
+  margin-bottom: 12px;
+  line-height: 1.4;
+}
+.upload-card .help small {
+  font-size: 12px;
+  color: #999;
+}
+
+/* 드롭존 */
+.dropzone {
+  margin-top: 10px;
+  border: 2px dashed #c7d2fe; /* 연한 인디고 */
+  background: #f8fafc;
+  padding: 18px;
+  border-radius: 10px;
+  text-align: center;
+  color: #475569;
+  transition: all .15s ease;
+  cursor: pointer;
+}
+.dropzone.over {
+  border-color: #6366f1;     /* indigo-500 */
+  background: #eef2ff;       /* indigo-50 */
+  color: #3730a3;
+}
+
+/* 버튼 */
+.upload-btn {
+  margin-top: 12px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  font-weight: 600;
+  color: #305078;
+  cursor: pointer;
+  transition: background .15s ease;
+}
+.upload-btn:hover {
+  background: #f9fafb;
+  border-color: #b8cbe0;
 }

@@ -163,7 +163,7 @@ export default function Platform() {
           ))}
         </div>
 
-        {/* ✅ 페이지 슬라이더 */}
+        
         <div className="schedule-slider" aria-label="경기 슬라이더">
           <button className="slide-button" onClick={prevSlide} disabled={!canPrev} aria-label="이전">{'<'}</button>
 

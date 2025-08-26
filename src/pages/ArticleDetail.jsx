@@ -1,111 +1,247 @@
 // src/pages/ArticleDetail.jsx
-
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import '../styles/ArticleDetail.css';
-import { FaHeart, FaRegCommentDots, FaShareAlt } from 'react-icons/fa';
+import { FaHeart, FaRegCommentDots, FaShareAlt, FaTrashAlt } from 'react-icons/fa';
 
 export default function ArticleDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [article, setArticle] = useState(null);
   const [comments, setComments] = useState([]);
+  const [authorInput, setAuthorInput] = useState('');
   const [newComment, setNewComment] = useState('');
+  const [toast, setToast] = useState('');
 
+  // 초기 로드
   useEffect(() => {
-    const storedArticles = JSON.parse(localStorage.getItem('saved_files')) || [];
-    const found = storedArticles.find(a => a.id === Number(id));
+    const articles = JSON.parse(localStorage.getItem('saved_files') || '[]');
+    const found = articles.find(a => a.id === Number(id));
 
-    if (found) {
-      found.views = (found.views || 0) + 1;
-      const updated = storedArticles.map(a => a.id === found.id ? found : a);
-      localStorage.setItem('saved_files', JSON.stringify(updated));
-
-      setArticle(found);
-      const savedComments = JSON.parse(localStorage.getItem(`comments_${found.id}`) || '[]');
-      setComments(savedComments);
-    } else {
+    if (!found) {
       alert('해당 기사를 찾을 수 없습니다.');
       navigate('/platform');
+      return;
     }
+
+    const next = { ...found, views: (found.views || 0) + 1 };
+    localStorage.setItem(
+      'saved_files',
+      JSON.stringify(articles.map(a => (a.id === next.id ? next : a)))
+    );
+
+    setArticle(next);
+    setComments(JSON.parse(localStorage.getItem(`comments_${next.id}`) || '[]'));
+
+    const user = JSON.parse(localStorage.getItem('user_info') || 'null');
+    setAuthorInput(user ? `${user.firstName || ''}${user.lastName || ''}` : '');
   }, [id, navigate]);
 
-  const handleReaction = (type) => {
-    const updated = { ...article };
-    if (!updated.reactions) updated.reactions = {};
-    updated.reactions[type] = (updated.reactions[type] || 0) + 1;
+  // 좋아요(중복 방지)
+  const likeKey = useMemo(() => `reacted_${id}_like`, [id]);
+  const handleLike = () => {
+    if (!article || sessionStorage.getItem(likeKey) === 'true') return;
+    const updated = { ...article, reactions: { ...(article.reactions || {}) } };
+    updated.reactions.like = (updated.reactions.like || 0) + 1;
     setArticle(updated);
-
-    const stored = JSON.parse(localStorage.getItem('saved_files')) || [];
-    const newList = stored.map(a => a.id === updated.id ? updated : a);
-    localStorage.setItem('saved_files', JSON.stringify(newList));
+    const stored = JSON.parse(localStorage.getItem('saved_files') || '[]');
+    localStorage.setItem(
+      'saved_files',
+      JSON.stringify(stored.map(a => (a.id === updated.id ? updated : a)))
+    );
+    sessionStorage.setItem(likeKey, 'true');
   };
 
-  const handleAddComment = () => {
-    if (newComment.trim() === '') return;
-    const updatedComments = [...comments, newComment];
-    setComments(updatedComments);
+  // 댓글
+  const submitComment = () => {
+    if (!newComment.trim() || !article) return;
+    const entry = {
+      id: Date.now(),
+      author: authorInput?.trim() || '익명',
+      text: newComment.trim(),
+      time: new Date().toLocaleString(),
+    };
+    const next = [entry, ...comments];
+    setComments(next);
     setNewComment('');
-    localStorage.setItem(`comments_${article.id}`, JSON.stringify(updatedComments));
+    localStorage.setItem(`comments_${article.id}`, JSON.stringify(next));
   };
 
-  if (!article) return <div>Loading...</div>;
+  const handleDeleteComment = (cid) => {
+    if (!article) return;
+    const next = comments.filter(c => c.id !== cid);
+    setComments(next);
+    localStorage.setItem(`comments_${article.id}`, JSON.stringify(next));
+  };
+
+  // 공유
+  const handleShare = async () => {
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: article?.title || '기사',
+          text: '기사를 공유합니다',
+          url: window.location.href,
+        });
+        setToast('공유 완료!');
+      } else {
+        await navigator.clipboard.writeText(window.location.href);
+        setToast('링크 복사됨!');
+      }
+    } catch {
+      setToast('공유 실패');
+    } finally {
+      setTimeout(() => setToast(''), 1200);
+    }
+  };
+
+  // 태그 클릭 → 검색어 주입
+  const handleTagClick = (tag) => {
+    localStorage.setItem('dashboard_q', tag);
+    navigate('/');
+  };
+
+  if (!article) return <div className="article-loading">Loading…</div>;
 
   return (
-    <div className="article-detail-wrapper">
-      <Link to="/platform" className="back-link">← 돌아가기</Link>
-
-      <h1 className="article-title">{article.title}</h1>
-      <div className="article-meta">
-        🖋 {article.reporter || '기자 미상'} | 👁 {article.views?.toLocaleString()} views
+    <div className="article-wrap">
+      <div className="article-header">
+        <Link to="/platform" className="back-link">← 목록으로</Link>
       </div>
 
-      <div className="reporter-info">
-        <img src={article.profileImg || 'https://placehold.co/60x60'} alt="기자" />
-        <div className="reporter-details">
-          <div className="reporter-name">{article.reporter}</div>
-          <div className="reporter-email">{article.email}</div>
-        </div>
-      </div>
+      <article className="article">
+        {/* 제목 */}
+        <h1 className="article__title">{article.title}</h1>
 
-      <img src={article.image || 'https://placehold.co/399x357?text=No+Image'} alt="기사 이미지" className="article-image" />
-
-      <p className="article-content">{article.content}</p>
-
-      <div className="tags">
-        {article.tags?.map(tag => (
-          <span key={tag} className="tag">#{tag}</span>
-        ))}
-      </div>
-
-      <div className="reactions">
-        <div className="reaction-item" onClick={() => handleReaction('like')}>
-          <FaHeart className="reaction-icon" /> {article.reactions?.like || 0}
-        </div>
-        <div className="reaction-item">
-          <FaRegCommentDots className="reaction-icon" /> {comments.length}
-        </div>
-        <div className="reaction-item" onClick={() => navigator.clipboard.writeText(window.location.href)}>
-          <FaShareAlt className="reaction-icon" /> 공유
-        </div>
-      </div>
-
-      <div className="comments-section">
-        <h3>댓글</h3>
-        <textarea value={newComment} onChange={e => setNewComment(e.target.value)} placeholder="댓글을 입력하세요" />
-        <button onClick={handleAddComment}>댓글 등록</button>
-        <div className="comment-list">
-          {comments.map((c, i) => (
-            <div key={i} className="comment">
-              <div className="comment-avatar" />
-              <div className="comment-text">
-                <div className="comment-author">익명</div>
-                <div>{c}</div>
+        {/* 메타 + 기자 박스 한 줄 정렬 */}
+        <div className="article__meta">
+          <div className="meta__left">
+            <div className="reporter">
+              <img
+                src={article.profileImg || 'https://placehold.co/56x56'}
+                alt="기자"
+                className="reporter__img"
+              />
+              <div className="reporter__info">
+                <div className="reporter__row">
+                  <span className="reporter__name">{article.reporter || '기자 미상'}</span>
+                  <span className="reporter__dept">{article.department || '소속 부서'}</span>
+                </div>
+                <div className="reporter__sub">
+                  {article.email && <span>{article.email}</span>}
+                </div>
               </div>
             </div>
-          ))}
+          </div>
+          <div className="meta__right">
+            <span>📅 {article.date}</span>
+            <span>👁 {article.views?.toLocaleString()} views</span>
+          </div>
         </div>
-      </div>
+
+        {/* 대표 이미지 (본문 내 중앙) */}
+        {article.image && (
+          <figure className="feature">
+            <img
+              src={article.image}
+              alt="기사 이미지"
+              className="feature__img"
+            />
+          </figure>
+        )}
+
+        {/* 본문 */}
+        <div className="article__body">
+          <p>{article.content}</p>
+        </div>
+
+        {/* 태그 */}
+        {!!article.tags?.length && (
+          <div className="tags">
+            {article.tags.map(tag => (
+              <button key={tag} className="tag" onClick={() => handleTagClick(tag)}>
+                #{tag}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* 액션 바 */}
+        <div className="actions-bar">
+          <button
+            className={`action action--like ${sessionStorage.getItem(likeKey) === 'true' ? 'on' : ''}`}
+            onClick={handleLike}
+            title="좋아요"
+          >
+            <FaHeart /> <span>{article.reactions?.like || 0}</span>
+          </button>
+
+          <div className="action" title="댓글 수">
+            <FaRegCommentDots /> <span>{comments.length}</span>
+          </div>
+
+          <button className="action" onClick={handleShare} title="공유">
+            <FaShareAlt /> <span>공유</span>
+          </button>
+
+          {toast && <div className="toast">{toast}</div>}
+        </div>
+      </article>
+
+      {/* 댓글 */}
+      <section className="comments">
+        <h3 className="comments__title">댓글</h3>
+
+        <div className="comment-form">
+          <input
+            className="comment-author"
+            placeholder="작성자 (선택)"
+            value={authorInput}
+            onChange={e => setAuthorInput(e.target.value)}
+          />
+          <textarea
+            className="comment-input"
+            placeholder="댓글을 입력하세요 (Enter 등록, Shift+Enter 줄바꿈)"
+            value={newComment}
+            onChange={e => setNewComment(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                submitComment();
+              }
+            }}
+          />
+          <button className="comment-submit" onClick={submitComment}>
+            댓글 등록
+          </button>
+        </div>
+
+        <div className="comment-list">
+          {comments.length === 0 ? (
+            <div className="comment-empty">첫 댓글을 남겨보세요!</div>
+          ) : (
+            comments.map(c => (
+              <div key={c.id} className="comment">
+                <div className="comment__avatar" />
+                <div className="comment__body">
+                  <div className="comment__row">
+                    <span className="comment__author">{c.author || '익명'}</span>
+                    <span className="comment__time">{c.time}</span>
+                    <button
+                      className="comment__delete"
+                      title="삭제"
+                      onClick={() => handleDeleteComment(c.id)}
+                    >
+                      <FaTrashAlt />
+                    </button>
+                  </div>
+                  <div className="comment__text">{c.text}</div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </section>
     </div>
   );
 }

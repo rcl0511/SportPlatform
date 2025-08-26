@@ -263,18 +263,19 @@
   border-color: #007bff;
   font-weight: bold;
 }
-
 .edit-container {
   margin-top: 60px;
   position: relative;
   width: 100%;
-  max-width: 900px;
+  max-width: 1200px;   /* ✅ 더 크게: 예시 1200px */
   background: white;
   border-radius: 12px;
-  padding: 32px;
+  padding: 40px;       /* ✅ 여백도 살짝 늘려서 균형 맞춤 */
   box-shadow: 0 0 10px rgba(0,0,0,0.05);
   overflow-y: auto;
 }
+
+
 .edit-container.fullscreen {
   width: 100vw;
   height: 100vh;
@@ -283,10 +284,12 @@
   border-radius: 0;
 }
 .edit-layout {
-  display: flex;
-  gap: 24px;
-  align-items: flex-start;
+  display: grid;
+  grid-template-columns: 1fr 300px;  /* 열림 상태: 메인 1fr + 우측 300px */
+  gap: 0;
+  align-items: start;
 }
+
 .edit-main {
   flex: 1;
 }
@@ -507,11 +510,14 @@
   grid-template-columns: 1fr 0px;
 }
 
-/* 사이드바 쉘: 부드럽게 접히는 애니메이션 */
+/* 사이드바 쉘 */
 .rightbar-shell {
   max-width: 300px;
   overflow: hidden;
   transition: max-width .25s ease;
+}
+.edit-layout.rb-collapsed .rightbar-shell {
+  max-width: 0;
 }
 .edit-layout.rb-collapsed .rightbar-shell {
   max-width: 0;
@@ -579,8 +585,13 @@
   flex: 1;
 }
 
-/* 반응형: 좁은 화면에서는 자동 접기 추천(선택) */
+
+/* ✅ 반응형: 화면 작으면 사이드바 아예 제거 + 메인 100% */
 @media (max-width: 1120px) {
-  .edit-layout { grid-template-columns: 1fr; }
-  .rightbar-shell { display: none; }
+  .edit-layout {
+    grid-template-columns: 1fr;   /* 메인만 100% */
+  }
+  .rightbar-shell {
+    display: none;               /* 사이드바 감추기 */
+  }
 }

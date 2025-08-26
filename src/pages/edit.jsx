@@ -1,15 +1,21 @@
-// src/pages/Edit.jsx (일부분만 발췌/교체)
-import  { useState, useEffect } from 'react';
+// src/pages/Edit.jsx
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Rightbar from '../components/Rightbar';
+import FilePreviewPanel from '../components/FilePreviewPanel';
 import '../styles/Edit.css';
 import * as XLSX from 'xlsx';
+
+
+console.log('Rightbar is', Rightbar);
+console.log('FilePreviewPanel is', FilePreviewPanel);
+
 
 const Edit = () => {
   const navigate = useNavigate();
 
   // ✅ 사이드바 열림/닫힘 상태
-  const [isRightbarOpen, setIsRightbarOpen] = useState(true);
+  const [isRightbarOpen] = useState(true);
 
   // ✅ 오늘 인기 제목 (hot_topics → 없으면 기본 더미)
   const [hotTopics, setHotTopics] = useState([
@@ -31,57 +37,81 @@ const Edit = () => {
     // hot_topics가 있으면 사용
     const storedTopics = JSON.parse(localStorage.getItem('hot_topics') || '[]');
     if (storedTopics.length) {
-      // storedTopics가 { text } 형태면 그대로, 아니면 적절히 매핑
-      const mapped = storedTopics.map((t, i) => ({ id: t.id || `t${i+1}`, text: t.text || String(t) }));
+      const mapped = storedTopics.map((t, i) => ({ id: t.id || `t${i + 1}`, text: t.text || String(t) }));
       setHotTopics(mapped);
     }
   }, []);
 
-  const handleFileChange = (e) => {
-    const files = Array.from(e.target.files);
+  // 🔧 파일 선택 핸들러 (안정화: Promise.all + XLSX 파싱)
+  const handleFileChange = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+
     const newImages = [];
     const newCsvs = [];
+    const nextExpanded = { ...expandedCsvs };
 
-    files.forEach((file) => {
-      const reader = new FileReader();
+    await Promise.all(
+      files.map(async (file) => {
+        // 이미지
+        if (file.type.startsWith('image/')) {
+          const url = URL.createObjectURL(file);
+          newImages.push({ name: file.name, src: url });
+          return;
+        }
 
-      if (file.type.startsWith('image/')) {
-        reader.onload = () => {
-          newImages.push({ name: file.name, src: reader.result });
-          setPreviewImages((prev) => [...prev, ...newImages]);
-        };
-        reader.readAsDataURL(file);
-
-      } else if (/\.csv$/i.test(file.name)) {
-        reader.onload = () => {
-          const text = reader.result;
-          const rows = text.trim().split(/\r?\n/).map(row => row.split(','));
+        // CSV
+        if (/\.csv$/i.test(file.name)) {
+          const text = await file.text();
+          // XLSX로 CSV 파싱 (따옴표/콤마 안전)
+          const wb = XLSX.read(text, { type: 'string' });
+          const first = wb.SheetNames[0];
+          const sheet = wb.Sheets[first];
+          const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, blankrows: false, defval: '' });
           newCsvs.push({ name: file.name, rows });
-          setPreviewCsvs((prev) => [...prev, ...newCsvs]);
-        };
-        reader.readAsText(file);
+          if (!(file.name in nextExpanded)) nextExpanded[file.name] = false;
+          return;
+        }
 
-      } else if (/\.xlsx$/i.test(file.name) || /\.xls$/i.test(file.name)) {
-        reader.onload = () => {
-          const data = new Uint8Array(reader.result);
-          const workbook = XLSX.read(data, { type: 'array' });
-          const firstSheet = workbook.SheetNames[0];
-          const sheet = workbook.Sheets[firstSheet];
-          const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+        // XLSX/XLS
+        if (/\.xlsx?$/i.test(file.name) || /\.xls$/i.test(file.name)) {
+          const buf = await file.arrayBuffer();
+          const wb = XLSX.read(buf, { type: 'array' });
+          const first = wb.SheetNames[0];
+          const sheet = wb.Sheets[first];
+          const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, blankrows: false, defval: '' });
           newCsvs.push({ name: file.name, rows });
-          setPreviewCsvs((prev) => [...prev, ...newCsvs]);
-        };
-        reader.readAsArrayBuffer(file);
-      }
-    });
+          if (!(file.name in nextExpanded)) nextExpanded[file.name] = false;
+          return;
+        }
 
+        // 기타 파일: 업로드 목록에는 포함되지만 미리보기는 제외
+        return;
+      })
+    );
+
+    // 중복 파일명 제거(원하면 제거하지 않고 쌓이도록 변경 가능)
+    const dedupByName = (arr) => {
+      const seen = new Set();
+      return [...arr].filter((f) => {
+        const ok = !seen.has(f.name);
+        if (ok) seen.add(f.name);
+        return ok;
+      });
+    };
+
+    setPreviewImages((prev) => dedupByName([...prev, ...newImages]));
+    setPreviewCsvs((prev) => dedupByName([...prev, ...newCsvs]));
+    setExpandedCsvs(nextExpanded);
     setUploadedFiles((prev) => [...prev, ...files]);
   };
 
+  // CSV 펼침/접기
   const toggleCsvExpansion = (fileName) => {
     setExpandedCsvs((prev) => ({ ...prev, [fileName]: !prev[fileName] }));
   };
 
+  // 다음 단계로 이동 (파일/요청사항 검증)
   const handleNextStep = () => {
     if (!subject.trim()) {
       alert('요청사항을 입력해주세요!');
@@ -93,11 +123,28 @@ const Edit = () => {
     }
     localStorage.setItem('edit_subject', subject);
     localStorage.setItem('edit_tags', JSON.stringify(tags));
-    localStorage.setItem('edit_files', JSON.stringify(uploadedFiles.map(f => f.name)));
-    navigate('/edit2', { state: { uploadedFiles } });
+    localStorage.setItem('edit_files', JSON.stringify(uploadedFiles.map((f) => f.name)));
+
+    // 🔁 Edit2에서도 같은 미리보기 필요 → 파일 자체를 state로 전달
+    navigate('/edit2', {
+      state: {
+        uploadedFiles, // File[] 전달 → Edit2에서 동일 파싱/미리보기 가능
+      },
+    });
   };
 
   const handleCancel = () => navigate('/');
+
+  // ✅ ObjectURL 정리(메모리 누수 방지)
+  useEffect(() => {
+    return () => {
+      previewImages.forEach((img) => {
+        if (img?.src?.startsWith('blob:')) {
+          URL.revokeObjectURL(img.src);
+        }
+      });
+    };
+  }, [previewImages]);
 
   // 🔹 긴 텍스트 자르기 유틸
   const cut = (s, n = 40) => (s?.length > n ? s.slice(0, n) + '…' : s);
@@ -109,10 +156,11 @@ const Edit = () => {
         <div className="edit-header">
           <h2>스포츠 기사 작성 시작하기</h2>
 
-          {/* 🔘 우측 사이드바 토글 버튼 */}
+          {/* 🔘 우측 사이드바 토글 버튼(필요 시 활성화) */}
           <div className="edit-actions">
-
-
+            {/* <button onClick={() => setIsRightbarOpen((v) => !v)} className="button-white">
+              {isRightbarOpen ? '사이드바 닫기' : '사이드바 열기'}
+            </button> */}
             <div className="edit-close" onClick={handleCancel}>×</div>
           </div>
         </div>
@@ -130,9 +178,7 @@ const Edit = () => {
           <div className="form-group">
             <label>경기 데이터/자료 첨부 (필수)</label>
             <label htmlFor="fileUpload" className="file-upload-label">
-              {uploadedFiles.length > 0
-                ? `${uploadedFiles.length}개 파일 선택됨`
-                : '파일을 선택하거나 드래그'}
+              {uploadedFiles.length > 0 ? `${uploadedFiles.length}개 파일 선택됨` : '파일을 선택하거나 드래그'}
             </label>
             <input
               id="fileUpload"
@@ -141,6 +187,7 @@ const Edit = () => {
               onChange={handleFileChange}
               multiple
               required
+              accept="image/*,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
             />
           </div>
 
@@ -160,53 +207,24 @@ const Edit = () => {
               <h4>오늘 인기있는 제목</h4>
             </div>
             <ul className="rb-hot-list">
-              {hotTopics.slice(0, 6).map(t => (
+              {hotTopics.slice(0, 6).map((t) => (
                 <li key={t.id} className="rb-hot-item">
                   <span className="rb-dot" />
-                  <span className="rb-hot-text" title={t.text}>{cut(t.text, 36)}</span>
+                  <span className="rb-hot-text" title={t.text}>
+                    {cut(t.text, 36)}
+                  </span>
                 </li>
               ))}
             </ul>
           </section>
 
-          {/* ——— 파일 미리보기 ——— */}
-          <div className="file-preview">
-            {previewImages.length > 0 && (
-              <div className="image-preview-group">
-                <h4>이미지 미리보기</h4>
-                {previewImages.map((img, idx) => (
-                  <img key={idx} src={img.src} alt={img.name} style={{ width: '100%', marginBottom: '8px' }} />
-                ))}
-              </div>
-            )}
-
-            {previewCsvs.map((csv, idx) => {
-              const isExpanded = expandedCsvs[csv.name];
-              const visibleRows = isExpanded ? csv.rows : csv.rows.slice(0, 10);
-
-              return (
-                <div key={idx} style={{ marginBottom: '1rem' }}>
-                  <strong>{csv.name}</strong>
-                  <table className="csv-preview"><tbody>
-                    {visibleRows.map((row, i) => (
-                      <tr key={i}>
-                        {row.map((cell, j) => (<td key={j}>{cell}</td>))}
-                      </tr>
-                    ))}
-                  </tbody></table>
-                  {csv.rows.length > 10 && (
-                    <button onClick={() => toggleCsvExpansion(csv.name)} className="csv-toggle-btn">
-                      {isExpanded ? '간단히 보기 ▲' : '더보기 ▼'}
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-
-            {previewImages.length === 0 && previewCsvs.length === 0 && (
-              <div className="no-preview">이미지 또는 CSV 파일만 미리보기가 가능합니다.</div>
-            )}
-          </div>
+          {/* ——— 파일 미리보기(재사용 컴포넌트) ——— */}
+          <FilePreviewPanel
+            previewImages={previewImages}
+            previewCsvs={previewCsvs}
+            expandedCsvs={expandedCsvs}
+            onToggle={toggleCsvExpansion}
+          />
         </Rightbar>
       </div>
     </div>

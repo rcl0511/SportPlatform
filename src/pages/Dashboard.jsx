@@ -1,9 +1,8 @@
 // src/pages/Dashboard.jsx
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import '../styles/Dashboard.css';
-import Rightbar from '../components/Rightbar';
 import { useNavigate } from 'react-router-dom';
 import ViewsChart from '../components/ViewsChart';
 
@@ -39,54 +38,53 @@ const Dashboard = () => {
   const getLogo = (teamName) => {
     const team = baseballTeams.find((t) => t.name === teamName);
     return team ? team.logo : '';
-    };
+  };
 
   // 초기 로드
- useEffect(() => {
-  const stored = JSON.parse(localStorage.getItem('saved_files') || '[]');
+  useEffect(() => {
+    const stored = JSON.parse(localStorage.getItem('saved_files') || '[]');
 
-  // ✅ id 없는 기사 보정
-  let mutated = false;
-  const normalized = stored.map(a => {
-    if (!a.id) {
-      mutated = true;
-      return { ...a, id: Date.now() + Math.floor(Math.random() * 1000) };
+    // id 없는 기사 보정
+    let mutated = false;
+    const normalized = stored.map(a => {
+      if (!a.id) {
+        mutated = true;
+        return { ...a, id: Date.now() + Math.floor(Math.random() * 1000) };
+      }
+      return a;
+    });
+    if (mutated) {
+      localStorage.setItem('saved_files', JSON.stringify(normalized));
     }
-    return a;
-  });
-  if (mutated) {
-    localStorage.setItem('saved_files', JSON.stringify(normalized));
-  }
 
-  // 날짜/조회/팀 필드 정규화
-  const withDates = normalized.map((r) => ({
-    ...r,
-    date: r.date
-      ? r.date
-      : (r.createdAt || r.timestamp)
-      ? new Date(r.createdAt || r.timestamp).toISOString().slice(0, 10)
-      : new Date().toISOString().slice(0, 10),
-    views: r.views ?? 1,
-    team: r.team || r.tag || '',
-  }));
-  setReports(withDates);
+    // 날짜/조회/팀 필드 정규화
+    const withDates = normalized.map((r) => ({
+      ...r,
+      date: r.date
+        ? r.date
+        : (r.createdAt || r.timestamp)
+        ? new Date(r.createdAt || r.timestamp).toISOString().slice(0, 10)
+        : new Date().toISOString().slice(0, 10),
+      views: r.views ?? 1,
+      team: r.team || r.tag || '',
+    }));
+    setReports(withDates);
 
-  // 최근 경기
-  const storedGames =
-    JSON.parse(localStorage.getItem('recentGames') || '[]');
-  if (storedGames.length) {
-    setRecentGames(storedGames);
-  } else {
-    setRecentGames([
-      { date: '2025-07-14', home: '한화 이글스', homeScore: 4, away: '롯데 자이언츠', awayScore: 2 },
-      { date: '2025-07-13', home: 'LG 트윈스', homeScore: 3, away: '키움 히어로즈', awayScore: 5 },
-      { date: '2025-07-12', home: '두산 베어스', homeScore: 2, away: '삼성 라이온즈', awayScore: 1 },
-    ]);
-  }
+    // 최근 경기
+    const storedGames = JSON.parse(localStorage.getItem('recentGames') || '[]');
+    if (storedGames.length) {
+      setRecentGames(storedGames);
+    } else {
+      setRecentGames([
+        { date: '2025-07-14', home: '한화 이글스', homeScore: 4, away: '롯데 자이언츠', awayScore: 2 },
+        { date: '2025-07-13', home: 'LG 트윈스', homeScore: 3, away: '키움 히어로즈', awayScore: 5 },
+        { date: '2025-07-12', home: '두산 베어스', homeScore: 2, away: '삼성 라이온즈', awayScore: 1 },
+      ]);
+    }
 
-  // 즐겨찾기 팀
-  setFavoriteTeams(JSON.parse(localStorage.getItem('favoriteTeams') || '[]'));
-}, []);
+    // 즐겨찾기 팀
+    setFavoriteTeams(JSON.parse(localStorage.getItem('favoriteTeams') || '[]'));
+  }, []);
 
   // 차트 데이터 빌드
   const buildChartData = (list, f) => {
@@ -236,6 +234,89 @@ const Dashboard = () => {
     navigate('/result');
   };
 
+  // =========================
+  // 📎 일정 업로드: CSV/XLSX (버튼 + 드롭존)
+  // =========================
+  const fileRef = useRef(null);
+  const [dragOver, setDragOver] = useState(false);
+
+  const handleScheduleFile = async (file) => {
+    if (!file) return;
+    try {
+      const XLSX = await import('xlsx');
+
+      let wb;
+      if (/\.csv$/i.test(file.name)) {
+        const text = await file.text();
+        wb = XLSX.read(text, { type: 'string' });
+      } else if (/\.(xlsx|xls)$/i.test(file.name)) {
+        const buf = await file.arrayBuffer();
+        wb = XLSX.read(buf, { type: 'array' });
+      } else {
+        alert('CSV, XLSX, XLS 파일만 지원합니다.');
+        return;
+      }
+
+      const sheet = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+      if (!rows.length) { alert('빈 파일입니다.'); return; }
+
+      const header = rows[0].map((h) => String(h).trim().toLowerCase());
+      const idx = {
+        date: header.indexOf('date'),
+        home: header.indexOf('home'),
+        away: header.indexOf('away'),
+        homeScore: header.indexOf('homescore'),
+        awayScore: header.indexOf('awayscore'),
+      };
+      if (idx.date === -1 || idx.home === -1 || idx.away === -1) {
+        alert('필수 컬럼(date, home, away)이 없습니다.');
+        return;
+      }
+
+      const toYMD = (d) => {
+        const isSerial = Number.isFinite(d);
+        if (isSerial) {
+          const x = XLSX.SSF.parse_date_code(d);
+          if (x) return `${x.y}-${String(x.m).padStart(2,'0')}-${String(x.d).padStart(2,'0')}`;
+        }
+        const s = String(d).trim();
+        if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+        const dt = new Date(s);
+        return isNaN(dt) ? '' : dt.toISOString().slice(0,10);
+      };
+
+      const parsed = rows.slice(1).map((r) => {
+        const dateStr = toYMD(r[idx.date]);
+        return {
+          date: dateStr,
+          home: String(r[idx.home] ?? '').trim(),
+          away: String(r[idx.away] ?? '').trim(),
+          homeScore: r[idx.homeScore] === '' ? undefined : Number(r[idx.homeScore]),
+          awayScore: r[idx.awayScore] === '' ? undefined : Number(r[idx.awayScore]),
+        };
+      }).filter(g => g.date && g.home && g.away);
+
+      if (!parsed.length) { alert('유효한 행을 찾지 못했습니다.'); return; }
+
+      localStorage.setItem('recentGames', JSON.stringify(parsed));
+      setRecentGames(parsed);
+      alert(`일정 ${parsed.length}건을 불러왔습니다.`);
+    } catch (err) {
+      console.error('일정 업로드 실패:', err);
+      alert('일정 파일을 읽는 중 오류가 발생했습니다.');
+    }
+  };
+
+  const handleScheduleUpload = async (e) => {
+    const files = Array.from(e.target.files || []);
+    for (const f of files) {
+      // eslint-disable-next-line no-await-in-loop
+      await handleScheduleFile(f);
+    }
+    e.target.value = '';
+  };
+
   return (
     <div className="dashboard-container">
       <div className="dashboard-main">
@@ -311,7 +392,6 @@ const Dashboard = () => {
                   <img src={team.logo} alt={team.name} />
                   <span>{team.name}</span>
                   <span
-                
                     className={`star ${fav ? 'on' : ''}`}
                     onClick={(e) => {
                       e.stopPropagation();
@@ -327,8 +407,8 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* 본문 2열: 캘린더 / 팀 목록 */}
-        <div className="grid-2">
+        {/* 본문 3열로: 캘린더 / 팀 목록 / 일정 업로드 */}
+        <div className="grid-3">
           <div className="calendar-card">
             <h3>캘린더</h3>
             <Calendar
@@ -339,36 +419,34 @@ const Dashboard = () => {
               tileContent={tileContent}
               tileClassName={tileClassName}
             />
-           {/* 날짜별 기사 팝업 */}
-{selectedReports.length > 0 && (
-  <div className="date-articles-popup">
-    <h3>{selectedDateStr} 작성된 기사</h3>
-    <div className="date-articles-list">
-      {selectedReports.map((a, i) => (
-        <div
-          key={i}
-          className="date-article-card"
-          onClick={() => {
-            // id가 없는 기존 데이터 대비: 없으면 에디터로
-            if (a.id) {
-              navigate(`/platform/article/${a.id}`);
-            } else {
-              localStorage.setItem('edit_subject', a.title || '');
-              localStorage.setItem('edit_content', a.content || '');
-              navigate('/result');
-            }
-          }}
-        >
-          <div className="date-article-title">{a.title}</div>
-          <div className="date-article-snippet">
-            {(a.content || '').slice(0, 60).trim()}…
-          </div>
-        </div>
-      ))}
-    </div>
-  </div>
-)}
-
+            {/* 날짜별 기사 팝업 */}
+            {selectedReports.length > 0 && (
+              <div className="date-articles-popup">
+                <h3>{selectedDateStr} 작성된 기사</h3>
+                <div className="date-articles-list">
+                  {selectedReports.map((a, i) => (
+                    <div
+                      key={i}
+                      className="date-article-card"
+                      onClick={() => {
+                        if (a.id) {
+                          navigate(`/platform/article/${a.id}`);
+                        } else {
+                          localStorage.setItem('edit_subject', a.title || '');
+                          localStorage.setItem('edit_content', a.content || '');
+                          navigate('/result');
+                        }
+                      }}
+                    >
+                      <div className="date-article-title">{a.title}</div>
+                      <div className="date-article-snippet">
+                        {(a.content || '').slice(0, 60).trim()}…
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="teams-card">
@@ -381,6 +459,48 @@ const Dashboard = () => {
                 </div>
               ))}
             </div>
+          </div>
+
+          {/* 📎 일정 업로드 카드 (드롭존 + 버튼 + 숨긴 input) */}
+          <div className="upload-card">
+            <h3>일정 업로드</h3>
+            <p className="help">
+              CSV/XLSX 파일을 업로드하면 ‘다가오는 경기’에 자동 반영됩니다.<br />
+              필요 컬럼: <code>date</code>, <code>home</code>, <code>away</code> (<code>homeScore</code>, <code>awayScore</code> 선택)
+            </p>
+
+            <div
+              className={`dropzone ${dragOver ? 'over' : ''}`}
+              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setDragOver(false);
+                const files = Array.from(e.dataTransfer.files || []);
+                files.forEach((f) => handleScheduleFile(f));
+              }}
+            >
+              여기로 파일을 드래그해서 놓으세요
+            </div>
+
+            <button
+              className="upload-btn"
+              type="button"
+              onClick={() => fileRef.current?.click()}
+            >
+              파일 선택
+            </button>
+            <input
+              ref={fileRef}
+              id="scheduleUpload"
+              type="file"
+              accept=".csv,.xlsx,.xls"
+              multiple
+              onChange={handleScheduleUpload}
+              style={{ display: 'none' }}
+            />
+
+            <div className="help small">예: 2025-09-01, LG 트윈스 vs 두산 베어스</div>
           </div>
         </div>
 
@@ -404,6 +524,13 @@ const Dashboard = () => {
                     <img src={getLogo(g.away)} alt={g.away} className="team-logo-sm" />
                     {g.away}
                   </span>
+                  {(Number.isFinite(g.homeScore) || Number.isFinite(g.awayScore)) && (
+                    <span className="u-score">
+                      {Number.isFinite(g.homeScore) ? g.homeScore : '-'}
+                      {' : '}
+                      {Number.isFinite(g.awayScore) ? g.awayScore : '-'}
+                    </span>
+                  )}
                 </li>
               ))}
             </ul>
@@ -412,8 +539,6 @@ const Dashboard = () => {
           )}
         </div>
       </div>
-
-      
     </div>
   );
 };

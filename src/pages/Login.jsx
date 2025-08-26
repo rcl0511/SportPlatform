@@ -3,15 +3,18 @@ import React, { useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../contexts/AuthContext';
 
+const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:8000';
+const KAKAO_APP_KEY = process.env.REACT_APP_KAKAO_KEY || 'ae6f405402a71e2f12dc093ead8907b5';
+
 const Login = () => {
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');         // username -> email
   const [password, setPassword] = useState('');
   const { setIsLoggedIn, setUserInfo } = useContext(AuthContext);
   const navigate = useNavigate();
 
   useEffect(() => {
     if (window.Kakao && !window.Kakao.isInitialized()) {
-      window.Kakao.init('ae6f405402a71e2f12dc093ead8907b5');
+      window.Kakao.init(KAKAO_APP_KEY);
     }
   }, []);
 
@@ -19,28 +22,36 @@ const Login = () => {
 
   const handleLogin = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/login', {
+      const response = await fetch(`${API_BASE}/api/login`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          username,
-          password,
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }), // ✅ 스펙 준수
       });
-      if (!response.ok) throw new Error('Login failed');
+
+      if (!response.ok) {
+        let msg = 'Login failed';
+        try { const err = await response.json(); msg = err?.message || msg; } catch {}
+        throw new Error(msg);
+      }
 
       const data = await response.json();
       localStorage.setItem('token', data.access_token);
       localStorage.setItem('user_info', JSON.stringify(data.user));
       localStorage.setItem('isLoggedIn', 'true');
-      setUserInfo(data.user);
+
+      // ✅ 파생 필드 보정: 다른 화면 호환
+      const derived = {
+        ...data.user, // { id, email, nickname }
+        firstName: (data.user?.nickname || '').charAt(0) || '',
+        lastName: (data.user?.nickname || '').slice(1) || '',
+        department: data.user?.department || '', // 서버가 주면 사용, 없으면 빈 값
+      };
+      setUserInfo(derived);
       setIsLoggedIn(true);
       navigate('/');
     } catch (error) {
       console.error('로그인 실패:', error);
-      alert('로그인 실패');
+      alert(`로그인 실패: ${error.message}`);
     }
   };
 
@@ -55,40 +66,51 @@ const Login = () => {
         window.Kakao.API.request({
           url: '/v2/user/me',
           success: async function (res) {
-            console.log('카카오 사용자 정보', res);
-
-            const kakaoId = res.id?.toString() || '';
-            const nickname = res.kakao_account?.profile?.nickname || '카카오유저';
-            const email = res.kakao_account?.email || `${kakaoId}@kakao.local`;  // 이메일 없으면 가짜 이메일로 대체
-        
-            const kakaoUser = {
-              email,
-              nickname,
-              kakaoId,
-            };
-        
             try {
-              const serverRes = await fetch('http://localhost:8000/api/kakao-login', {
+              console.log('카카오 사용자 정보', res);
+
+              const kakaoId = res.id?.toString() || '';
+              const nickname = res.kakao_account?.profile?.nickname || '카카오유저';
+              const emailFromKakao = res.kakao_account?.email || ''; // ✅ 없으면 빈 문자열
+
+              const kakaoUser = {
+                email: emailFromKakao,
+                nickname,
+                kakaoId,
+              };
+
+              const serverRes = await fetch(`${API_BASE}/api/kakao-login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(kakaoUser),
               });
-        
-              if (!serverRes.ok) throw new Error('서버 로그인 실패');
-        
+
+              if (!serverRes.ok) {
+                let msg = '서버 로그인 실패';
+                try { const err = await serverRes.json(); msg = err?.message || msg; } catch {}
+                throw new Error(msg);
+              }
+
               const data = await serverRes.json();
               console.log('서버 데이터:', data);
-        
+
               localStorage.setItem('token', data.access_token);
               localStorage.setItem('user_info', JSON.stringify(data.user));
               localStorage.setItem('isLoggedIn', 'true');
-        
-              setUserInfo(data.user);
+
+              // ✅ 파생 필드 보정
+              const derived = {
+                ...data.user, // { id, email, nickname }
+                firstName: (data.user?.nickname || '').charAt(0) || '',
+                lastName: (data.user?.nickname || '').slice(1) || '',
+                department: data.user?.department || '',
+              };
+              setUserInfo(derived);
               setIsLoggedIn(true);
               navigate('/');
             } catch (error) {
               console.error('카카오 로그인 서버 실패:', error);
-              alert('서버 로그인 실패');
+              alert(`서버 로그인 실패: ${error.message}`);
             }
           },
           fail: (error) => {
@@ -109,24 +131,25 @@ const Login = () => {
       <form onSubmit={(e) => e.preventDefault()} style={formStyle}>
         <h2 style={{ textAlign: 'center', color: '#092C4C' }}>Login</h2>
 
-        
-
-        {/* 아이디 입력 */}
+        {/* 이메일 입력 */}
         <input
-          type="username"
-          placeholder="Username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
           required
+          autoComplete="email"
           style={inputStyle}
         />
 
+        {/* 비밀번호 입력 */}
         <input
           type="password"
           placeholder="PASSWORD"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
+          autoComplete="current-password"
           style={inputStyle}
         />
 
