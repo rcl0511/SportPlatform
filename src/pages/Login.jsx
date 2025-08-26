@@ -25,7 +25,7 @@ const Login = () => {
       const response = await fetch(`${API_BASE}/api/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }), // ✅ 스펙 준수
+        body: JSON.stringify({ username: email, password }), // 백엔드는 username 필드를 요구함
       });
 
       if (!response.ok) {
