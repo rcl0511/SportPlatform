@@ -215,6 +215,10 @@ export default function Platform() {
             </div>
           </div>
 
+          
+
+
+
           <button className="slide-button" onClick={nextSlide} disabled={!canNext} aria-label="다음">{'>'}</button>
         </div>
 

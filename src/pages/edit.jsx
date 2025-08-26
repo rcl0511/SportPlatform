@@ -125,7 +125,7 @@ const Edit = () => {
     localStorage.setItem('edit_tags', JSON.stringify(tags));
     localStorage.setItem('edit_files', JSON.stringify(uploadedFiles.map((f) => f.name)));
 
-    // 🔁 Edit2에서도 같은 미리보기 필요 → 파일 자체를 state로 전달
+    //  Edit2에서도 같은 미리보기 필요 → 파일 자체를 state로 전달
     navigate('/edit2', {
       state: {
         uploadedFiles, // File[] 전달 → Edit2에서 동일 파싱/미리보기 가능
@@ -135,7 +135,7 @@ const Edit = () => {
 
   const handleCancel = () => navigate('/');
 
-  // ✅ ObjectURL 정리(메모리 누수 방지)
+  //  ObjectURL 정리(메모리 누수 방지)
   useEffect(() => {
     return () => {
       previewImages.forEach((img) => {
@@ -158,10 +158,7 @@ const Edit = () => {
 
           {/* 🔘 우측 사이드바 토글 버튼(필요 시 활성화) */}
           <div className="edit-actions">
-            {/* <button onClick={() => setIsRightbarOpen((v) => !v)} className="button-white">
-              {isRightbarOpen ? '사이드바 닫기' : '사이드바 열기'}
-            </button> */}
-            <div className="edit-close" onClick={handleCancel}>×</div>
+
           </div>
         </div>
 

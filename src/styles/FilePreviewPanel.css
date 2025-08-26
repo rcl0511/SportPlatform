@@ -9,7 +9,7 @@
   --fp-shadow:0 8px 24px rgba(15,30,46,0.08);
 }
 
-/* 파일 미리보기 카드 컨테이너(부모에서 .file-preview 사용 중) */
+/* 파일 미리보기 카드 */
 .file-preview{
   background: var(--fp-bg);
   border: 1px solid var(--fp-line);
@@ -18,7 +18,6 @@
   padding: 14px;
 }
 
-/* 이미지 그룹 간격만 살짝 */
 .image-preview-group h4{
   margin: 0 0 10px;
   font-size: 14px;
@@ -28,85 +27,87 @@
   border-radius: 10px;
   border: 1px solid var(--fp-line);
   box-shadow: 0 6px 16px rgba(0,0,0,.05);
+  max-width: 100%;
 }
 
-/* ===== CSV 래퍼(스크롤바 예쁘게) ===== */
+.csv-block { margin-bottom: 1rem; }
+
+/* 기본 테이블은 내용에 맞춰 늘고, 컨테이너가 스크롤을 담당 */
 .csv-wrapper{
-  max-height: 280px;
-  overflow: auto;
+  max-height: 480px;
+  overflow: auto;              /* ← 가로/세로 스크롤 */
   border: 1px solid var(--fp-line);
   border-radius: 12px;
-  margin-top: 8px;
-  background: linear-gradient(180deg, #fff 0%, #fbfdff 100%);
+  margin-top: 6px;
+  background: linear-gradient(180deg,#fff 0%,#fbfdff 100%);
   box-shadow: inset 0 1px 0 #fff;
 }
 
-/* 커스텀 스크롤바 (WebKit) */
-.csv-wrapper::-webkit-scrollbar{
-  width: 10px; height: 10px;
-}
-.csv-wrapper::-webkit-scrollbar-track{
-  background: #f5f8ff; border-radius: 10px;
-}
+/* 스크롤바(WebKit) */
+.csv-wrapper::-webkit-scrollbar{ width: 10px; height: 10px; }
+.csv-wrapper::-webkit-scrollbar-track{ background: #f5f8ff; border-radius: 10px; }
 .csv-wrapper::-webkit-scrollbar-thumb{
   background: #cfdaf0; border-radius: 10px; border: 2px solid #f5f8ff;
 }
-.csv-wrapper::-webkit-scrollbar-thumb:hover{
-  background: #b9c9ee;
-}
+.csv-wrapper::-webkit-scrollbar-thumb:hover{ background: #b9c9ee; }
 
-/* ===== 표 ===== */
 .csv-preview{
   width: 100%;
+  min-width: 960px;            /* ← 열 많을 때 가로 스크롤 유도 */
   border-collapse: separate;
   border-spacing: 0;
-  table-layout: fixed;
+  table-layout: auto;          /* 내용에 맞춰 칸 늘리기 */
   color: var(--fp-ink);
   font-size: 13px;
+  line-height: 1.45;
+}
+.csv-preview.csv-preview--nowrap th:first-child,
+.csv-preview.csv-preview--nowrap td:first-child{
+  min-width: 180px;            /* 첫 열은 좀 더 넓게 */
+}
+/* ─── 새 모드: 줄바꿈 금지(가로 스크롤) ─── */
+.csv-preview.csv-preview--nowrap th,
+.csv-preview.csv-preview--nowrap td{
+  white-space: nowrap;         /* ← 줄바꿈 금지 */
+  word-break: keep-all;        /* ← 한글 단어 단위로 유지 (글자단위 끊김 방지) */
+  overflow: visible;           /* ← 내용 보여주기 (컨테이너가 스크롤) */
+  text-overflow: clip;
+  min-width: 120px;            /* 기본 칸 폭 (원하면 조절) */
 }
 
-/* 첫 행을 헤더처럼 강조 */
-.csv-preview tr:first-child td{
+/* 헤더(첫 행) sticky 처리 */
+.csv-preview thead th{
   position: sticky;
   top: 0;
-  z-index: 1;
-  background: linear-gradient(180deg, #f4f8ff 0%, #ecf3ff 100%);
+  z-index: 2;
+  background: linear-gradient(180deg,#f4f8ff 0%,#ecf3ff 100%);
   color: #23406a;
   font-weight: 700;
+  text-align: left;
+  padding: 10px 12px;
   border-bottom: 1px solid #dbe6fb;
   box-shadow: 0 1px 0 #eaf1ff;
 }
 
-/* 지브라 스트라이프 + 호버 */
-.csv-preview tr:nth-child(odd) td{ background: #fcfeff; }
-.csv-preview tr:nth-child(even) td{ background: #f9fbff; }
-.csv-preview tr:hover td{
+/* 바디 셀 */
+.csv-preview tbody td{
+  border-right: 1px solid #edf2fa;
+  border-bottom: 1px solid #edf2fa;
+  padding: 10px 12px;
+}
+
+/* 줄무늬 + Hover */
+.csv-preview tbody tr:nth-child(odd) td{ background: #fcfeff; }
+.csv-preview tbody tr:nth-child(even) td{ background: #f9fbff; }
+.csv-preview tbody tr:hover td{
   background: #eef4ff;
   transition: background .15s ease;
 }
 
-/* 셀 */
-.csv-preview td{
-  border-right: 1px solid #edf2fa;
-  border-bottom: 1px solid #edf2fa;
-  padding: 10px 12px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.csv-preview tr td:first-child{
-  border-left: 1px solid transparent;
-}
-.csv-preview tr:last-child td{
-  border-bottom: 0;
-}
+/* 숫자 정렬을 원하면 <td class="num"> 사용 */
+.csv-preview td.num{ text-align: right; font-variant-numeric: tabular-nums; }
 
-/* 길어질 때 말풍선 느낌으로 title 툴팁이 보이므로 ellipsis 유지 */
-.csv-preview td[title]{
-  cursor: help;
-}
-
-/* ===== 토글 버튼 ===== */
+/* 토글 버튼 */
 .csv-toggle-btn{
   margin-top: 10px;
   padding: 8px 14px;
@@ -126,17 +127,9 @@
   box-shadow: 0 6px 14px rgba(62,113,255,0.18);
 }
 
-/* 파일명 텍스트(컴포넌트에서 <strong> 사용) */
-.file-preview strong{
-  display: inline-block;
-  margin: 8px 0 4px;
-  font-size: 13px;
-  color: var(--fp-ink);
-}
-
-/* 작은 화면에서 폰트/패딩 축소 */
+/* 작은 화면 */
 @media (max-width: 640px){
-  .csv-preview{ font-size: 12px; }
-  .csv-preview td{ padding: 8px 10px; }
-  .csv-wrapper{ max-height: 220px; }
+  .csv-preview{ font-size: 12px; min-width: 100%; }
+  .csv-preview th, .csv-preview td{ padding: 8px 10px; }
+  .csv-wrapper{ max-height: 280px; }
 }

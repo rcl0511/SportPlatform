@@ -1,6 +1,6 @@
 /* ===== 베이스 ===== */
 .platform-wrapper{
-  --header-h: 90px;
+  --header-h: 20px;
   font-family: 'Mulish', sans-serif;
   padding: calc(20px + var(--header-h)) 20px 20px;
   background: #f7f9fc;
@@ -32,13 +32,16 @@
 .slide-window{ overflow:hidden; }
 .slide-track{ display:flex; gap:16px; padding:0 2px; }
 
+/* 카드: 페이지 그리드 칸을 꽉 채우도록 width:auto */
 .match-card{
   background:#fff; border-radius:12px; padding:14px;
-  width: clamp(160px, 18vw, 220px);
+  width: auto;            /* ⬅️ 고정/클램프 폭 제거 */
+  min-width: 0;           /* 그리드 내에서 줄바꿈 허용 */
   box-shadow: 0 2px 8px rgba(0,0,0,.05);
-  flex:0 0 auto;
 }
-.match-card.placeholder{ opacity:.25; }
+
+/* 페이지를 채우기 위한 플레이스홀더(자리만 차지, 화면엔 안보임) */
+.match-card.placeholder{ visibility: hidden; }
 
 .match-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
 .match-status{ font-weight:800; display:flex; align-items:center; gap:6px; }
@@ -73,11 +76,21 @@
 
 /* ===== 레이아웃 (한 번만 정의) ===== */
 .content-grid{
-  display:grid; grid-template-columns: 1fr 320px;
-  gap:20px; max-width:1200px; margin:0 auto; padding:0 16px; box-sizing:border-box;
+  display:grid;
+  grid-template-columns: minmax(0, 1fr) 360px; /* 본문 / 사이드 폭 */
+  gap:20px;
+  /* 가운데 정렬을 없애고, 전체 폭을 활용 */
+  max-width: none;
+  margin: 0;
+  padding: 0 8px 0 16px;  /* 우측 여백 최소화 */
+  box-sizing:border-box;
 }
 .main-column{ min-width:0; }
-.right-column{ min-width:280px; }
+.right-column{
+  width:360px;
+  min-width:320px;
+  justify-self: end;      /* ⬅️ 오른쪽 끝으로 붙이기 */
+}
 .right-sticky{ position:sticky; top: calc(var(--header-h) + 6px); }
 
 /* ===== 뉴스 섹션 ===== */

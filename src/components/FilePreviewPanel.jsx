@@ -2,7 +2,6 @@
 import React from 'react';
 import '../styles/FilePreviewPanel.css';
 
-
 export default function FilePreviewPanel({
   previewImages = [],
   previewCsvs = [],
@@ -29,24 +28,32 @@ export default function FilePreviewPanel({
 
       {previewCsvs.map((csv, idx) => {
         const isExpanded = !!expandedCsvs[csv.name];
-        const visibleRows = isExpanded ? csv.rows : csv.rows.slice(0, 10);
+        const rows = isExpanded ? csv.rows : csv.rows.slice(0, 10);
+
+        // 첫 행을 헤더로 취급(있으면)
+        const header = rows[0] || [];
+        const body = rows.length > 1 ? rows.slice(1) : [];
 
         return (
-          <div key={`${csv.name}-${idx}`} style={{ marginBottom: '1rem' }}>
+          <div key={`${csv.name}-${idx}`} className="csv-block">
             <strong>{csv.name}</strong>
-            <div style={{ maxHeight: 260, overflow: 'auto', border: '1px solid #eee', borderRadius: 8, marginTop: 6 }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+
+            <div className="csv-wrapper">
+              <table className="csv-preview csv-preview--nowrap">
+                {header.length > 0 && (
+                  <thead>
+                    <tr>
+                      {header.map((cell, j) => (
+                        <th key={j} title={String(cell)}>{String(cell)}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                )}
                 <tbody>
-                  {visibleRows.map((row, i) => (
+                  {(body.length ? body : rows).map((row, i) => (
                     <tr key={i}>
                       {row.map((cell, j) => (
-                        <td
-                          key={j}
-                          title={String(cell)}
-                          style={{ border: '1px solid #e9e9e9', padding: '6px 8px', fontSize: 12, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
-                        >
-                          {cell}
-                        </td>
+                        <td key={j} title={String(cell)}>{String(cell)}</td>
                       ))}
                     </tr>
                   ))}
@@ -55,10 +62,7 @@ export default function FilePreviewPanel({
             </div>
 
             {csv.rows.length > 10 && (
-              <button
-                onClick={() => onToggle(csv.name)}
-                style={{ marginTop: 6, padding: '6px 10px', fontSize: 12, border: '1px solid #ddd', borderRadius: 6, background: '#fff', cursor: 'pointer' }}
-              >
+              <button className="csv-toggle-btn" onClick={() => onToggle(csv.name)}>
                 {isExpanded ? '간단히 보기 ▲' : '더보기 ▼'}
               </button>
             )}
