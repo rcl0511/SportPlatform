@@ -6,10 +6,32 @@ import { MdEdit, MdHome, MdShare, MdSave, MdPictureAsPdf, MdClose } from 'react-
 import jsPDF from 'jspdf';
 import '../styles/Result.css';
 
+const MAX_SAVED_ITEMS = 200;   // 메타 목록 최대 유지 개수
+const PREVIEW_LEN = 300;       // saved_files에 저장할 본문 미리보기 길이
+
 const hexToRgb = (hex) => {
   const [r, g, b] = hex.replace('#', '').match(/.{2}/g).map((x) => parseInt(x, 16));
   return { r, g, b };
 };
+
+// 저장 시 용량 초과 시도 → 실패하면 evictFn 실행 후 1회 재시도
+function trySetItemWithEvict(key, value, evictFn) {
+  try {
+    localStorage.setItem(key, value);
+    return true;
+  } catch (e) {
+    if (typeof evictFn === 'function') {
+      evictFn();
+      try {
+        localStorage.setItem(key, value);
+        return true;
+      } catch {
+        return false;
+      }
+    }
+    return false;
+  }
+}
 
 const TEAM_KEYWORDS = [
   'LG 트윈스','두산 베어스','삼성 라이온즈','기아 타이거즈','SSG 랜더스','NC 다이노스','한화 이글스','롯데 자이언츠','키움 히어로즈','KT WIZ','KT 위즈','KT',
@@ -102,12 +124,10 @@ const Result = () => {
   // 🔹 간단 “AI” 태그 추천(로컬/규칙 기반)
   const makeSuggestions = useMemo(() => {
     return (title, content) => {
-      // 1) 외부에서 미리 넣어둔 추천이 있으면 우선 사용
       const preset = JSON.parse(localStorage.getItem('ai_tag_suggestions') || '[]')
         .map((t) => String(t).trim())
         .filter(Boolean);
 
-      // 2) 규칙 기반 추출
       const text = `${title} ${content}`.toLowerCase();
       const set = new Set();
 
@@ -118,7 +138,6 @@ const Result = () => {
         if (text.includes(k.toLowerCase())) set.add(k);
       });
 
-      // 자주 나오는 단어 간이 추출(한글/영문/숫자 2~10자)
       const freq = {};
       (text.match(/[가-힣a-zA-Z0-9]{2,10}/g) || []).forEach((w) => {
         freq[w] = (freq[w] || 0) + 1;
@@ -130,13 +149,9 @@ const Result = () => {
         .map(([w]) => w);
 
       topWords.forEach((w) => set.add(w));
-
-      // 기본 장르 태그
       set.add('스포츠');
 
-      // preset 병합(앞쪽 우선)
       const merged = [...preset, ...Array.from(set)];
-      // 중복 제거 & 최대 12개로 제한
       return Array.from(new Set(merged)).slice(0, 12);
     };
   }, []);
@@ -161,11 +176,10 @@ const Result = () => {
     const recs = makeSuggestions(reportTitle, reportContent);
     console.log('📝 로컬 규칙으로 생성된 태그:', recs);
     setSuggestedTags(recs);
-    // 추천 중 상위 3개를 기본 선택값으로 (원하면 0개로 시작해도 OK)
     setSelectedTags((prev) => (prev.length ? prev : recs.slice(0, 3)));
   }, [reportTitle, reportContent, makeSuggestions]);
 
-  // 태그 조작 함수
+  // 태그 조작
   const toggleSelectTag = (tag) => {
     setSelectedTags((prev) =>
       prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
@@ -186,27 +200,73 @@ const Result = () => {
     setIsEditing(false);
 
     const existing = JSON.parse(localStorage.getItem('saved_files') || '[]');
+    const id = Date.now();
 
-    const newArticle = {
-      id: Date.now(),
+    // saved_files에는 미리보기만(본문 전체/이미지는 별도 키에 저장)
+    const preview = (reportContent || '').slice(0, PREVIEW_LEN);
+
+    const newArticleMeta = {
+      id,
       title: reportTitle || '제목 없음',
-      content: reportContent || '',
+      content: preview,
       date: editableDate || new Date().toISOString().slice(0, 10),
-      reporter:
-        editableName || (userInfo ? `${userInfo.firstName}${userInfo.lastName}` : '기자 미상'),
+      reporter: editableName || (userInfo ? `${userInfo.firstName}${userInfo.lastName}` : '기자 미상'),
       department: editableDept || '',
       email: userInfo?.email || '',
-      image: imageUrl || '',
-      tags: selectedTags.length ? selectedTags : ['스포츠'], // 🔹 선택된 태그 반영
+      hasImage: Boolean(imageUrl),
+      tags: selectedTags.length ? selectedTags : ['스포츠'],
       views: 0,
     };
 
-    const nextList = [newArticle, ...existing];
-    localStorage.setItem('saved_files', JSON.stringify(nextList));
+    // 1) 전체 본문/이미지를 article:<id>로 분리 저장
+    const fullPayload = { content: reportContent || '', image: imageUrl || '' };
+    const fullSaved = trySetItemWithEvict(
+      `article:${id}`,
+      JSON.stringify(fullPayload),
+      () => {
+        // 공간 확보: saved_files에서 가장 오래된 것 하나 제거 + 대응 본문 제거
+        const metas = JSON.parse(localStorage.getItem('saved_files') || '[]');
+        if (metas.length > 0) {
+          const last = metas.pop();
+          localStorage.removeItem(`article:${last.id}`);
+          localStorage.setItem('saved_files', JSON.stringify(metas));
+        }
+      }
+    );
+    if (!fullSaved) {
+      alert('저장 공간이 부족합니다. 일부 오래된 기사를 삭제한 뒤 다시 시도해주세요.');
+      return;
+    }
+
+    // 2) 메타 목록 갱신(상한 유지)
+    const nextList = [newArticleMeta, ...existing].slice(0, MAX_SAVED_ITEMS);
+    const metaSaved = trySetItemWithEvict(
+      'saved_files',
+      JSON.stringify(nextList),
+      () => {
+        const metas = JSON.parse(localStorage.getItem('saved_files') || '[]');
+        if (metas.length > 0) {
+          const last = metas.pop();
+          localStorage.removeItem(`article:${last.id}`);
+          localStorage.setItem('saved_files', JSON.stringify(metas));
+        }
+      }
+    );
+    if (!metaSaved) {
+      // 최후의 수단: 미리보기 더 줄여 재시도
+      newArticleMeta.content = preview.slice(0, 120);
+      const final = trySetItemWithEvict('saved_files', JSON.stringify([newArticleMeta, ...existing]), null);
+      if (!final) {
+        alert('저장 공간이 부족합니다. 불필요한 기사/이미지를 지우고 다시 시도하세요.');
+        // 본문은 이미 article:<id>로 들어갔을 수 있으니 정리
+        localStorage.removeItem(`article:${id}`);
+        return;
+      }
+    }
 
     // 에디터 복귀 대비(선택)
-    localStorage.setItem('edit_subject', newArticle.title);
-    localStorage.setItem('edit_content', newArticle.content);
+    localStorage.setItem('edit_subject', newArticleMeta.title);
+    localStorage.setItem('edit_content', reportContent || '');
 
     // 사용자 정보(선택) 업데이트
     const updatedUser = {
@@ -218,21 +278,20 @@ const Result = () => {
     setUserInfo(updatedUser);
     localStorage.setItem('user_info', JSON.stringify(updatedUser));
 
-    // 🔔 알림 생성(유틸 없이 직접)
+    // 🔔 알림
     const alarmList = JSON.parse(localStorage.getItem('alarm_list') || '[]');
     const newAlarm = {
       id: Date.now(),
-      message: `새 기사 [${newArticle.title}] 이(가) 작성되었습니다.`,
+      message: `새 기사 [${newArticleMeta.title}] 이(가) 작성되었습니다.`,
       time: new Date().toLocaleString(),
-      meta: { type: 'article', articleId: newArticle.id },
+      meta: { type: 'article', articleId: id },
     };
-    const updatedAlarms = [newAlarm, ...alarmList];
-    localStorage.setItem('alarm_list', JSON.stringify(updatedAlarms));
+    localStorage.setItem('alarm_list', JSON.stringify([newAlarm, ...alarmList]));
     localStorage.setItem('hasNewAlarm', 'true');
     localStorage.setItem('hasNewDashboardAlert', 'true');
 
     alert('저장되었습니다!');
-    navigate(`/platform/article/${newArticle.id}`);
+    navigate(`/platform/article/${id}`);
   };
 
   // PDF 생성 공통

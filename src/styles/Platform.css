@@ -27,10 +27,29 @@
   background:#fff; border:1px solid #e5ebf4; width:36px; height:36px; border-radius:8px;
   cursor:pointer; font-size:18px; color:#333; display:grid; place-items:center;
 }
-.slide-button:hover{ background:#f2f6ff; }
+.slide-button:hover{ background:#f2f6ff; } /* 탭/네비게이션은 호버 유지 */
 
-.slide-window{ overflow:hidden; }
+/* 슬라이드 창: X만 숨기고 Y는 노출 (카드 하단 잘림 방지) */
+.slide-window{ overflow-x:hidden; overflow-y:visible; }
 .slide-track{ display:flex; gap:16px; padding:0 2px; }
+
+/* 페이지 단위 슬라이드 트랙 */
+.slide-track.slide-track--paged {
+  display: flex;
+  transition: transform .35s ease;
+  will-change: transform;
+}
+
+/* 각 페이지(슬라이드) */
+.slide-page {
+  display: flex;
+  gap: 16px;
+  padding: 0 2px;
+  /* width는 inline style로 % 지정됨 */
+}
+
+/* 비활성 버튼 흐리게 */
+.slide-button:disabled { opacity:.5; cursor:not-allowed; }
 
 .match-card{
   background:#fff; 
@@ -60,14 +79,70 @@
 
 .team-row{ display:flex; align-items:center; gap:8px; margin:6px 0; min-width:0; }
 .team-row img{ width:24px; height:24px; object-fit:contain; }
-.team-name{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.score{ margin-left:auto; font-weight:800; }
+.team-name{ flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.score{ margin-left:auto; font-weight:800; flex:0 0 auto; }
 
-.match-meta{ display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+.match-meta{ display:flex; flex-wrap:wrap; gap:6px; margin-top:4px; }
 .pill{
   font-size:12px; padding:4px 8px; border-radius:999px; background:#f5f7ff; color:#2a3f63; border:1px solid #e6ebf7;
 }
 .pill-time{ background:#fff7ec; color:#9a4c00; border-color:#ffe2bf; }
+
+/* 카드 하단 버튼 영역 */
+.match-actions{
+  margin-top:auto;
+  padding-top:10px;
+  border-top:1px dashed #edf1f6;
+  display:flex; justify-content:center;
+}
+
+/* ===== 버튼 (호버 제거) ===== */
+.btn{
+  display:inline-block;
+  padding:9px 14px;
+  border-radius:10px;
+  font-weight:800;
+  font-size:13px;
+  cursor:pointer;
+  transition: transform .08s ease, box-shadow .08s ease;
+  text-align:center;
+  min-width:120px;
+  border:none;
+  line-height:1;
+}
+
+/* 상세 보기 (블루) */
+.btn--default{
+  background: linear-gradient(135deg, #4facfe, #3283fd);
+  color:#fff;
+  box-shadow:0 3px 6px rgba(50,131,253,.25);
+}
+.btn--default:active{
+  transform: scale(.96);
+  box-shadow:0 2px 6px rgba(50,131,253,.2);
+}
+
+/* 라이브 보기 (레드) */
+.btn--live{
+  background: linear-gradient(135deg, #ff4e50, #e60000);
+  color:#fff;
+  box-shadow:0 3px 6px rgba(230,0,0,.25);
+}
+.btn--live:active{
+  transform: scale(.96);
+  box-shadow:0 2px 6px rgba(230,0,0,.2);
+}
+
+/* 결과 확인 (그린) */
+.btn--result{
+  background: linear-gradient(135deg, #4ade80, #16a34a);
+  color:#fff;
+  box-shadow:0 3px 6px rgba(22,163,74,.25);
+}
+.btn--result:active{
+  transform: scale(.96);
+  box-shadow:0 2px 6px rgba(22,163,74,.2);
+}
 
 /* 슬라이드 점 */
 .dots{ display:flex; gap:6px; justify-content:center; margin-top:10px; }
@@ -76,22 +151,19 @@
 }
 .dot-btn.active{ background:#514EF3; }
 
-/* ===== 레이아웃 (한 번만 정의) ===== */
+/* ===== 레이아웃 ===== */
 .content-grid{
   display:grid;
-  grid-template-columns: minmax(0, 1fr) 360px; /* 본문 / 사이드 폭 */
+  grid-template-columns: minmax(0, 1fr) 360px;
   gap:20px;
-  /* 가운데 정렬을 없애고, 전체 폭을 활용 */
-  max-width: none;
-  margin: 0;
-  padding: 0 8px 0 16px;  /* 우측 여백 최소화 */
+  max-width:none;
+  margin:0;
+  padding:0 8px 0 16px;
   box-sizing:border-box;
 }
 .main-column{ min-width:0; }
 .right-column{
-  width:360px;
-  min-width:320px;
-  justify-self: end;      /* ⬅️ 오른쪽 끝으로 붙이기 */
+  width:360px; min-width:320px; justify-self:end;
 }
 .right-sticky{ position:sticky; top: calc(var(--header-h) + 6px); }
 
@@ -106,7 +178,7 @@
   padding:16px; background:#fff; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,.05);
   transition: transform .18s ease;
 }
-.news-main:hover{ transform: translateY(-3px); }
+.news-main:hover{ transform: translateY(-3px); } /* 뉴스 카드 hover 유지(요청 없었음) */
 
 .news-main-img{
   width: clamp(160px, 22vw, 240px);
@@ -139,9 +211,6 @@
   background: linear-gradient(90deg, transparent, rgba(255,255,255,.5), transparent);
   transform: translateX(-100%); animation: shimmer 1.2s infinite;
 }
-@keyframes shimmer{
-  100% { transform: translateX(100%); }
-}
 
 /* 빈 상태 */
 .empty-card{
@@ -153,7 +222,6 @@
   margin-top:4px; text-decoration:none; color:#fff; background:#514EF3; border:1px solid #4A47E6;
   padding:8px 14px; border-radius:10px; font-weight:700;
 }
-.btn-empty:hover{ filter:brightness(1.05); }
 
 /* ===== 우측 카드 공통 ===== */
 .right-card{
@@ -196,25 +264,5 @@
   .news-main{ flex-direction:column; align-items:stretch; }
   .news-main-img{ width:100%; height: clamp(160px, 40vw, 220px); }
 }
-
-
-/* 페이지 단위 슬라이드 트랙 */
-.slide-track.slide-track--paged {
-  display: flex;
-  transition: transform .35s ease; /* 부드러운 이동 */
-  will-change: transform;
-}
-
-/* 각 페이지(슬라이드) */
-.slide-page {
-  display: flex;
-  gap: 16px;
-  padding: 0 2px;
-  /* width는 inline style로 % 지정됨 */
-}
-
-/* 비활성 버튼 흐리게 */
-.slide-button:disabled {
-  opacity: .5;
-  cursor: not-allowed;
-}
+.match-actions { justify-content: stretch; }
+.btn { width: 100%; min-width: 0; }

@@ -7,17 +7,14 @@ import '../styles/Edit.css';
 import * as XLSX from 'xlsx';
 
 
-console.log('Rightbar is', Rightbar);
-console.log('FilePreviewPanel is', FilePreviewPanel);
-
 
 const Edit = () => {
   const navigate = useNavigate();
 
-  // ✅ 사이드바 열림/닫힘 상태
+  // 사이드바 열림/닫힘 상태
   const [isRightbarOpen] = useState(true);
 
-  // ✅ 오늘 인기 제목 (hot_topics → 없으면 기본 더미)
+  // 오늘 인기 제목 (hot_topics → 없으면 기본 더미)
   const [hotTopics, setHotTopics] = useState([
     { id: 't1', text: '루키 외야수, 데뷔 첫 홈런으로 팀 승리 견인' },
     { id: 't2', text: '8월 MVP 레이스, 불펜 에이스 급부상' },
@@ -42,7 +39,7 @@ const Edit = () => {
     }
   }, []);
 
-  // 🔧 파일 선택 핸들러 (안정화: Promise.all + XLSX 파싱)
+  // 파일 선택 핸들러 (안정화: Promise.all + XLSX 파싱)
   const handleFileChange = async (e) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;

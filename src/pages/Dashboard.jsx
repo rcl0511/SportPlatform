@@ -22,6 +22,14 @@ const Dashboard = () => {
 
   const navigate = useNavigate();
 
+
+  const inputRef = useRef(null);
+const handleSearch = (e) => {
+  e.preventDefault();               // 폼 제출 시 새로고침 방지
+  setQ((prev) => prev.trim());      // 공백 제거 확정
+  inputRef.current?.blur();         // 모바일 키보드/포커스 내리기
+};
+
   const baseballTeams = [
     { name: 'LG 트윈스', logo: '/assets/LG.png' },
     { name: '두산 베어스', logo: '/assets/DOOSAN.png' },
@@ -178,16 +186,8 @@ const Dashboard = () => {
     const dateStr = date.toISOString().slice(0, 10);
     const dayReports = filteredReports.filter((r) => r.date === dateStr);
     if (!dayReports.length) return null;
-    return (
-      <div className="calendar-tile-content">
-        {dayReports.slice(0, 2).map((a, i) => (
-          <div key={i} className="calendar-article">
-            {a.title}
-          </div>
-        ))}
-        {dayReports.length > 2 && <div className="calendar-more">+{dayReports.length - 2}</div>}
-      </div>
-    );
+    // 점만 보여주기
+  return <span className="cal-dot" aria-hidden="true" />;
   };
 
   const tileClassName = ({ date, view }) => {
@@ -231,7 +231,7 @@ const Dashboard = () => {
     const title = template === 'review' ? '경기 리뷰 초안' : template === 'preview' ? '경기 프리뷰 초안' : '속보 초안';
     localStorage.setItem('edit_subject', title);
     localStorage.setItem('edit_content', '');
-    navigate('/result');
+    navigate('/edit');
   };
 
   // =========================
@@ -328,23 +328,30 @@ const Dashboard = () => {
           </div>
 
           <div className="actions">
-            <div className="search">
-              <input
-                placeholder="기사·팀·키워드 검색..."
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-              />
-              {q && <button className="ghost" onClick={() => setQ('')}>지우기</button>}
-            </div>
+   <div className="search">
+  <form onSubmit={handleSearch}>
+    <input
+      ref={inputRef}
+      placeholder="기사·팀·키워드 검색..."
+      value={q}
+      onChange={(e) => setQ(e.target.value)}
+    />
+    <button type="submit" className="primary">검색</button>
+    {q && (
+      <button
+        type="button"
+        className="ghost"
+        onClick={() => setQ('')}
+      >
+        지우기
+      </button>
+    )}
+  </form>
+</div>
             <div className="quick-buttons">
               <button className="primary" onClick={() => createDraft('breaking')}>+ 새 기사</button>
               <div className="dropdown">
-                <button className="ghost">템플릿</button>
-                <div className="menu">
-                  <div onClick={() => createDraft('preview')}>경기 프리뷰</div>
-                  <div onClick={() => createDraft('review')}>경기 리뷰</div>
-                  <div onClick={() => createDraft('breaking')}>속보</div>
-                </div>
+
               </div>
             </div>
           </div>
@@ -362,6 +369,13 @@ const Dashboard = () => {
             </div>
           ))}
         </div>
+
+        {/* 조회수 차트 */}
+        <div className="views-chart-card">
+          <h3>조회 추이</h3>
+          <ViewsChart data={chartData} filter={filter} setFilter={setFilter} />
+        </div>
+
 
         {/* 팀 필터 + 즐겨찾기 */}
         <div className="team-filter-card">
@@ -504,11 +518,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* 조회수 차트 */}
-        <div className="views-chart-card">
-          <h3>조회 추이</h3>
-          <ViewsChart data={chartData} filter={filter} setFilter={setFilter} />
-        </div>
+       
 
         {/* 다가오는 경기 */}
         <div className="upcoming-card">

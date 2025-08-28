@@ -436,6 +436,32 @@ button.ghost {
   color: #3730a3;
 }
 
+
+/* react-calendar 타일 안에 작은 점 표시 */
+.react-calendar__month-view__days__day {
+  position: relative;
+}
+
+/* 점: 날짜 숫자 아래쪽 중앙 */
+.cal-dot {
+  position: absolute;
+  left: 50%;
+  bottom: 6px;              /* 캘린더 폰트 크기에 따라 조정 */
+  transform: translateX(-50%);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #6A66FF;      /* 원하면 팀 색/테마 색으로 변경 가능 */
+  pointer-events: none;
+}
+
+/* 선택된 날에도 점이 보이도록(선택 배경 위에서 가독성 확보) */
+.react-calendar__tile--active .cal-dot {
+  background: #fff;
+  box-shadow: 0 0 0 2px #6A66FF inset;
+}
+
+
 /* 버튼 */
 .upload-btn {
   margin-top: 12px;
@@ -451,4 +477,85 @@ button.ghost {
 .upload-btn:hover {
   background: #f9fafb;
   border-color: #b8cbe0;
+}
+
+/* 검색 바 레이아웃 고정 */
+.search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 입력창이 포커스돼도 크기 안 변하게 */
+.search input {
+  width: 240px;              /* 필요시 200~280px로 조절 */
+  max-width: 240px;
+  font-size: 16px;           /* iOS 포커스 확대 방지(핵심) */
+  padding: 8px 10px;
+  line-height: 1.2;
+  transition: none;          /* 포커스 확대/애니메이션 제거 */
+  flex: 0 0 240px;           /* flex로 늘어나지 않게 고정 */
+}
+
+/* 포커스 시 보더/아웃라인만 변경하고, 크기는 유지 */
+.search input:focus {
+  outline: 2px solid #cfe3ff;
+  border-radius: 6px;
+}
+
+/* 검색 버튼이 줄바꿈으로 밀리지 않도록 */
+.btn-search {
+  white-space: nowrap;
+  padding: 8px 12px;
+}
+
+/* '지우기' 같은 유령 버튼이 레이아웃을 흔들지 않도록 */
+button.ghost {
+  white-space: nowrap;
+}
+
+/* 혹시 상위 컨테이너에서 input이 커지는 문제가 있으면 */
+.dash-header .actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+
+/* ---- 3분할 레이아웃: 달력 1/2, 나머지 1/4 + 1/4 ---- */
+.grid-3 {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr); /* 2 : 1 : 1 */
+  gap: clamp(12px, 2vw, 20px);
+  align-items: start; /* 카드 상단 정렬 */
+}
+
+/* 카드 공통 모양(있으면 생략 가능) */
+.calendar-card,
+.teams-card,
+.upload-card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.06);
+  padding: clamp(12px, 2vw, 16px);
+  height: 100%;
+}
+
+/* 반응형: 태블릿에서는 2열, 달력이 가로 전체 차지 */
+@media (max-width: 1024px) {
+  .grid-3 {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .calendar-card {
+    grid-column: 1 / -1; /* 달력이 한 줄 다 씀 */
+  }
+}
+
+/* 모바일: 1열 스택 */
+@media (max-width: 640px) {
+  .grid-3 {
+    grid-template-columns: 1fr;
+  }
+  .calendar-card { grid-column: auto; }
 }
