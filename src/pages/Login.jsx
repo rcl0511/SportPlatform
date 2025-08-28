@@ -3,7 +3,7 @@ import React, { useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../contexts/AuthContext';
 
-const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:8000';
+const API_BASE = process.env.REACT_APP_API_BASE || 'http://15.164.239.102:8000';
 const KAKAO_APP_KEY = process.env.REACT_APP_KAKAO_KEY || 'ae6f405402a71e2f12dc093ead8907b5';
 
 const Login = () => {
