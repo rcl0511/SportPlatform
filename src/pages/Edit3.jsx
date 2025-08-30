@@ -77,7 +77,7 @@ const Edit3 = () => {
 
         console.log('보고서 생성 API 호출 시작:', topic);
 
-        const response = await fetch('http://127.0.0.1:8000/api/generate-report', {
+                const response = await fetch('https://api.jolpai-backend.shop/api/generate-report', {
           method: 'POST',
           body: formData,
         });
