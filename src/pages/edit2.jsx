@@ -94,7 +94,7 @@ const Edit2 = () => {
       <div className="edit-userinfo">
         <div className="edit-userinfo-inner">
           <div className="edit-avatar" />
-          <div>{userInfo?.name || '익명 기자'}</div>
+
         </div>
       </div>
 
