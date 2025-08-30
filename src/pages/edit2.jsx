@@ -10,12 +10,13 @@ const Edit2 = () => {
 
   const [customTitle, setCustomTitle] = useState('');
   const [today, setToday] = useState('');
-  const [recommendedTitles, setRecommendedTitles] = useState([]);  // 🔥 API 결과로 대체
+  const [recommendedTitles, setRecommendedTitles] = useState([]); // API 결과
   const [selectedTitle, setSelectedTitle] = useState('');
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     // localStorage 요청사항 불러오기
-    const storedSubject = localStorage.getItem('edit_subject');
+    const storedSubject = localStorage.getItem('edit_subject') || '';
     if (storedSubject) setCustomTitle(storedSubject);
 
     // 오늘 날짜
@@ -31,6 +32,7 @@ const Edit2 = () => {
     // 🔥 API 호출해서 추천 제목 가져오기
     const fetchTitles = async () => {
       try {
+        setLoading(true);
         const res = await fetch('http://localhost:8000/generate-report', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -42,12 +44,9 @@ const Edit2 = () => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
 
-        // data.titles가 배열이면 state에 저장
-        if (Array.isArray(data.titles)) {
-          setRecommendedTitles(data.titles);
-        } else {
-          setRecommendedTitles([]);
-        }
+        // 백엔드 스키마: title: List[str]
+        const titles = Array.isArray(data.title) ? data.title : [];
+        setRecommendedTitles(titles);
       } catch (err) {
         console.error('제목 불러오기 실패:', err);
         // fallback 예시
@@ -56,6 +55,8 @@ const Edit2 = () => {
           'LG, 에이스 투수 활약으로 리그 선두 수성',
           'SSG 타선 폭발! 키움 상대 10-1 대승',
         ]);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -68,7 +69,7 @@ const Edit2 = () => {
 
     navigate('/edit3', {
       state: {
-        topic: selectedTitle || customTitle,
+        topic: (selectedTitle || customTitle || '').trim(),
         base64,
         fileName,
       },
@@ -77,6 +78,8 @@ const Edit2 = () => {
 
   const handleSelectTitle = (title) => {
     setSelectedTitle(title);
+    // 선택 시 입력창에도 반영하고 싶다면 아래 주석 해제
+    // setCustomTitle(title);
   };
 
   return (
@@ -117,15 +120,20 @@ const Edit2 = () => {
         <div className="form-group">
           <label>제목 추천</label>
           <div className="title-recommendations">
-            {recommendedTitles.map((title, idx) => (
+            {loading && <div className="title-loading">제목 생성 중…</div>}
+            {!loading && recommendedTitles.map((title, idx) => (
               <div
                 key={idx}
                 className={`title-item ${selectedTitle === title ? 'selected' : ''}`}
                 onClick={() => handleSelectTitle(title)}
+                title={title}
               >
                 {title}
               </div>
             ))}
+            {!loading && recommendedTitles.length === 0 && (
+              <div className="title-empty">추천 제목이 없습니다.</div>
+            )}
           </div>
         </div>
 

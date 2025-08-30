@@ -10,10 +10,10 @@ export default function Platform() {
 
   const scheduleTabs = ['주요 경기', 'KBO', '야구 기타'];
 
-  // ✅ 탭 선택 상태
+  // 탭 선택 상태
   const [activeTab, setActiveTab] = useState(scheduleTabs[0]);
 
-  // ✅ 슬라이드는 항상 5개씩 고정
+  // 슬라이드는 항상 5개씩 고정
   const ITEMS_PER_SLIDE = 5;
   const [slideIndex, setSlideIndex] = useState(0);
 
@@ -41,7 +41,7 @@ export default function Platform() {
     { status: '18:30 예정', date: today, homeTeam: '삼성', homeScore: 0, awayTeam: '한화',  awayScore: 0, homeLogo: '/SAMSUNG.png',  awayLogo: '/HANWHA.png',   stadium: '대구',  league: 'KBO', scheduledAt: todayWithTime('18:00') },
     { status: '18:30 예정', date: today, homeTeam: '키움', homeScore: 0, awayTeam: '롯데',  awayScore: 0, homeLogo: '/KIWOOM.png',   awayLogo: '/LOTTE.png',    stadium: '고척',  league: 'KBO', scheduledAt: todayWithTime('18:00') },
 
-    // ✅ 종료된 경기 (어제 날짜로 설정)
+    // 종료된 경기 (어제)
     { status: '종료', date: yesterday, homeTeam: '두산', homeScore: 7, awayTeam: 'LG', awayScore: 6, homeLogo: '/DOOSAN.png', awayLogo: '/LG.png', stadium: '잠실', broadcaster: 'SPOTV', league: 'KBO' },
     { status: '종료', date: yesterday, homeTeam: 'KIA', homeScore: 2, awayTeam: '삼성', awayScore: 5, homeLogo: '/KIA.png', awayLogo: '/SAMSUNG.png', stadium: '광주', broadcaster: 'KBSN', league: 'KBO' },
     { status: '종료', date: yesterday, homeTeam: '롯데', homeScore: 9, awayTeam: 'NC', awayScore: 3, homeLogo: '/LOTTE.png', awayLogo: '/NC.png', stadium: '사직', broadcaster: 'MBC Sports', league: 'KBO' },
@@ -92,14 +92,14 @@ export default function Platform() {
     }
   }, []);
 
-  // ✅ 탭에 따른 경기 리스트 필터
+  // 탭에 따른 경기 리스트 필터
   const filteredMatches = useMemo(() => {
     if (activeTab === 'KBO') return matchListWithIds.filter(m => m.league === 'KBO');
     if (activeTab === '야구 기타') return matchListWithIds.filter(m => m.league !== 'KBO');
     return matchListWithIds; // '주요 경기'
   }, [activeTab, matchListWithIds]);
 
-  // ✅ 페이지 단위로 분할해 슬라이드(항상 5개씩)
+  // 페이지 단위로 분할해 슬라이드(항상 5개씩)
   const pages = useMemo(() => {
     const arr = [];
     for (let i = 0; i < filteredMatches.length; i += ITEMS_PER_SLIDE) {
@@ -115,10 +115,10 @@ export default function Platform() {
   const nextSlide = () => setSlideIndex(prev => (prev + 1) % totalSlides);
   const prevSlide = () => setSlideIndex(prev => (prev - 1 + totalSlides) % totalSlides);
 
-  // ✅ 탭 변경 시 첫 페이지로
+  // 탭 변경 시 첫 페이지로
   useEffect(() => { setSlideIndex(0); }, [activeTab]);
 
-  // 👉 모바일 스와이프 지원
+  // 모바일 스와이프 지원
   const touchStartX = useRef(0);
   const touchDx = useRef(0);
   const onTouchStart = (e) => {
@@ -342,9 +342,49 @@ export default function Platform() {
           </section>
         </div>
 
+        {/* 우측 사이드: 기록 / 이슈 토픽(히트율) / 내 저장함 */}
         <aside className="right-column" aria-label="사이드 정보">
           <div className="right-sticky">
-            {/* 사이드 카드 등 기존 내용 그대로 … */}
+            <SideCard
+              title="오늘의 기록"
+              items={records.slice(0, 5)}
+              emptyText="오늘 기록이 아직 없어요."
+              onMore={() => alert('기록 더보기 준비 중!')}
+              renderItem={(r) => (
+                <li key={r.id} className="record-item">
+                  <div className="record-title">{r.title}</div>
+                  <div className="record-detail">{r.detail}</div>
+                  <span className="record-tag">{r.tag}</span>
+                </li>
+              )}
+            />
+
+            <SideCard
+              title="이슈 토픽"
+              items={hotTopics.slice(0, 6)}
+              emptyText="이슈 토픽이 아직 없어요."
+              onMore={() => alert('이슈 더보기 준비 중!')}
+              renderItem={(t) => (
+                <li key={t.id} className="topic-item">
+                  <div className="topic-text">{cut(t.text, 48)}</div>
+                  <div className="topic-heat">{formatHeat(t.heat)}</div>
+                </li>
+              )}
+            />
+
+            <SideCard
+              title="내 저장함"
+              rightLink={{ to: '/file', text: '관리' }}
+              items={(savedArticles || []).slice(0, 6)}
+              emptyText="아직 저장된 기사가 없어요."
+              renderItem={(a) => (
+                <li key={a.id || a.title} className="saved-item">
+                  <Link to={`/platform/article/${a.id || 0}`} className="saved-link">
+                    <span className="dot" /> {cut(a.title || '제목 없음', 36)}
+                  </Link>
+                </li>
+              )}
+            />
           </div>
         </aside>
       </div>
@@ -384,5 +424,28 @@ function EmptyCard({ title = '내용이 없어요', actionText, to }) {
         <Link to={to} className="btn-empty">{actionText}</Link>
       )}
     </div>
+  );
+}
+
+function SideCard({ title, items = [], emptyText, rightLink, onMore, renderItem }) {
+  return (
+    <section className="right-card">
+      <div className="right-card-header">
+        <h3>{title}</h3>
+        {rightLink ? (
+          <Link to={rightLink.to} className="mini-link">{rightLink.text}</Link>
+        ) : (
+          <button className="mini-link" onClick={onMore}>더보기</button>
+        )}
+      </div>
+      <ul
+        className={
+          title === '이슈 토픽' ? 'topic-list' :
+          title === '오늘의 기록' ? 'record-list' : 'saved-list'
+        }
+      >
+        {items.length ? items.map(renderItem) : <li className="saved-empty">{emptyText}</li>}
+      </ul>
+    </section>
   );
 }
