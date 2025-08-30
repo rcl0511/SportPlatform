@@ -18,6 +18,8 @@ import './App.css';
 import Alarm from './pages/Alarm';
 import Platform from './pages/Platform';
 import ArticleDetail from './pages/ArticleDetail';
+import EditVer2 from './pages/EditVer2';
+
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -52,6 +54,7 @@ function App() {
             <Route path="file" element={<File />} />
             <Route path="register" element={<Register />} />
             <Route path="edit" element={<Edit />} />
+            <Route path="/editver2" element={<EditVer2 />} />
 
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="/platform/article/:id" element={<ArticleDetail />} />

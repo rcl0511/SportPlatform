@@ -43,7 +43,7 @@
 /* 각 페이지(슬라이드) */
 .slide-page {
   display: flex;
-  gap: 16px;
+  gap: 50px;
   padding: 0 2px;
   /* width는 inline style로 % 지정됨 */
 }
@@ -135,7 +135,7 @@
 
 /* 결과 확인 (그린) */
 .btn--result{
-  background: linear-gradient(135deg, #4ade80, #16a34a);
+  background:#514EF3;
   color:#fff;
   box-shadow:0 3px 6px rgba(22,163,74,.25);
 }
