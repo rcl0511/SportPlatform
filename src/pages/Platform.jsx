@@ -379,7 +379,7 @@ export default function Platform() {
               emptyText="아직 저장된 기사가 없어요."
               renderItem={(a) => (
                 <li key={a.id || a.title} className="saved-item">
-                  <Link to={`/platform/article/${a.id || 0}`} className="saved-link">
+                  <Link to={'/platform/article/${id}'} className="saved-link">
                     <span className="dot" /> {cut(a.title || '제목 없음', 36)}
                   </Link>
                 </li>

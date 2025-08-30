@@ -45,7 +45,7 @@ const Edit2 = () => {
         const data = await res.json();
 
         // 백엔드 스키마: title: List[str]
-        const titles = Array.isArray(data.title) ? data.title : [];
+        const titles = Array.isArray(data.title ?? data.titles) ? (data.title ?? data.titles) : [];
         setRecommendedTitles(titles);
       } catch (err) {
         console.error('제목 불러오기 실패:', err);
