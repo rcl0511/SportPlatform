@@ -42,13 +42,12 @@ export default function Platform() {
     { status: '18:30 예정', date: today, homeTeam: '키움', homeScore: 0, awayTeam: '롯데',  awayScore: 0, homeLogo: '/KIWOOM.png',   awayLogo: '/LOTTE.png',    stadium: '고척',  league: 'KBO', scheduledAt: todayWithTime('18:00') },
 
     // 종료된 경기 (어제)
-    { status: '종료', date: yesterday, homeTeam: '두산', homeScore: 7, awayTeam: 'LG', awayScore: 6, homeLogo: '/DOOSAN.png', awayLogo: '/LG.png', stadium: '잠실', broadcaster: 'SPOTV', league: 'KBO' },
-    { status: '종료', date: yesterday, homeTeam: 'KIA', homeScore: 2, awayTeam: '삼성', awayScore: 5, homeLogo: '/KIA.png', awayLogo: '/SAMSUNG.png', stadium: '광주', broadcaster: 'KBSN', league: 'KBO' },
-    { status: '종료', date: yesterday, homeTeam: '롯데', homeScore: 9, awayTeam: 'NC', awayScore: 3, homeLogo: '/LOTTE.png', awayLogo: '/NC.png', stadium: '사직', broadcaster: 'MBC Sports', league: 'KBO' },
-    { status: '종료', date: yesterday, homeTeam: '한화', homeScore: 4, awayTeam: 'SSG', awayScore: 4, homeLogo: '/HANWHA.png', awayLogo: '/SSG.png', stadium: '대전', broadcaster: 'SPOTV', league: 'KBO' },
-    { status: '종료', date: yesterday, homeTeam: '키움', homeScore: 1, awayTeam: 'KT', awayScore: 8, homeLogo: '/KIWOOM.png', awayLogo: '/KT.png', stadium: '고척', broadcaster: 'SBS Sports', league: 'KBO' },
-  ];
-
+  { status: '종료', date: yesterday, homeTeam: 'KIA',   homeScore: 2, awayTeam: 'KT',  awayScore: 8, homeLogo: '/KIA.png',     awayLogo: '/KT.png',    stadium: '수원', broadcaster: 'KBS N SPORTS', league: 'KBO' },
+  { status: '종료', date: yesterday, homeTeam: 'NC',    homeScore: 12, awayTeam: 'SSG', awayScore: 2, homeLogo: '/NC.png',      awayLogo: '/SSG.png',   stadium: '문학', broadcaster: 'SPOTV',        league: 'KBO' },
+  { status: '종료', date: yesterday, homeTeam: '두산',  homeScore: 8, awayTeam: '롯데', awayScore: 8, homeLogo: '/DOOSAN.png',  awayLogo: '/LOTTE.png', stadium: '사직', broadcaster: 'SBS SPORTS',   league: 'KBO' },
+  { status: '종료', date: yesterday, homeTeam: '삼성',  homeScore: 4, awayTeam: '한화', awayScore: 0, homeLogo: '/SAMSUNG.png', awayLogo: '/HANWHA.png',stadium: '대전', broadcaster: 'MBC SPORTS+',  league: 'KBO' },
+  { status: '종료', date: yesterday, homeTeam: '키움',  homeScore: 5, awayTeam: 'LG',  awayScore: 6, homeLogo: '/KIWOOM.png',  awayLogo: '/LG.png',    stadium: '잠실', broadcaster: 'SPOTV2',       league: 'KBO' },
+];
   // 각 매치에 안전한 id 부여
   const matchListWithIds = useMemo(
     () => matchList.map((m, i) => ({ id: m.id ?? `match-${i}`, ...m })),
@@ -68,8 +67,9 @@ export default function Platform() {
   useEffect(() => {
     setLoading(true);
     try {
+      // ⬇️ 저장 기사만 상태에 반영 (더미는 별도로 병합)
       const stored = JSON.parse(localStorage.getItem('saved_files') || '[]');
-      setSavedArticles(stored.length ? stored : fallbackArticles);
+      setSavedArticles(stored);
 
       const storedRecords = JSON.parse(localStorage.getItem('recent_records') || '[]');
       setRecords(storedRecords.length ? storedRecords : [
@@ -85,12 +85,41 @@ export default function Platform() {
         { id: 't3', text: '트레이드 마감 임박, 각 팀 보강 시나리오', heat: 33 },
       ]);
     } catch {
-      setSavedArticles(fallbackArticles);
+      setSavedArticles([]);
     } finally {
       const t = setTimeout(() => setLoading(false), 250);
       return () => clearTimeout(t);
     }
   }, []);
+
+  // ===== 더미 ↓로 밀리고 실제 ↑로 오게 하는 병합 유틸 =====
+  function normalizeId(a, idx) {
+    return a?.id ?? `real-${idx}`;
+  }
+  function toKey(a) {
+    return (a?.id ?? a?.title ?? '').toString().trim();
+  }
+
+  // 1) 실제 기사: id 정규화 + 조회수 기준 내림차순
+  const realArticles = useMemo(() => {
+    const arr = Array.isArray(savedArticles) ? savedArticles : [];
+    return arr
+      .map((a, i) => ({ ...a, id: normalizeId(a, i), isDummy: false }))
+      .sort((a, b) => safeNum(b.views) - safeNum(a.views));
+  }, [savedArticles]);
+
+  // 2) 더미 기사: 실제와 중복 제거 후 접두사 id 부여
+  const dummyArticles = useMemo(() => {
+    const realKeys = new Set(realArticles.map(toKey));
+    return fallbackArticles
+      .filter(d => !realKeys.has(toKey(d)))
+      .map((d, i) => ({ ...d, id: `d-${d.id ?? i}`, isDummy: true }));
+  }, [realArticles, fallbackArticles]);
+
+  // 3) 최종 기사 목록: 실제 ↑ → 더미 ↓
+  const sortedArticles = useMemo(() => {
+    return [...realArticles, ...dummyArticles];
+  }, [realArticles, dummyArticles]);
 
   // 탭에 따른 경기 리스트 필터
   const filteredMatches = useMemo(() => {
@@ -133,12 +162,6 @@ export default function Platform() {
     if (touchDx.current < -threshold && canNext) nextSlide();
     if (touchDx.current > threshold && canPrev) prevSlide();
   };
-
-  const articles = (savedArticles && savedArticles.length > 0) ? savedArticles : fallbackArticles;
-
-  const sortedArticles = useMemo(() => {
-    return [...articles].sort((a, b) => (safeNum(b.views) - safeNum(a.views)));
-  }, [articles]);
 
   const getStatusColor = (status) => {
     if (status === 'LIVE') return '#E60000';
@@ -188,9 +211,7 @@ export default function Platform() {
           >
             <div
               className="slide-track slide-track--paged"
-              
-                style={{ transform: `translateX(-${slideIndex * 100}%)` }}
-              
+              style={{ transform: `translateX(-${slideIndex * 100}%)` }}
             >
               {pages.map((page, pIdx) => (
                 <div className="slide-page" key={pIdx} style={{ '--items-per': ITEMS_PER_SLIDE }}>
@@ -284,26 +305,22 @@ export default function Platform() {
 
             {/* 스켈레톤 */}
             {loading ? (
-  <div className="news-main skeleton" aria-hidden>
-    {/* ⬇️ 로딩 닫기 버튼 추가 */}
-    <button
-      type="button"
-      className="btn-x-close"
-      aria-label="로딩 닫기"
-      onClick={() => setLoading(false)}
-    >
-      
-    </button>
-
-    <div className="sk-img" />
-    <div className="sk-lines">
-      <div className="sk-line w-80" />
-      <div className="sk-line w-60" />
-      <div className="sk-line w-40" />
-    </div>
-  </div>
-) : (
-  <>
+              <div className="news-main skeleton" aria-hidden>
+                <button
+                  type="button"
+                  className="btn-x-close"
+                  aria-label="로딩 닫기"
+                  onClick={() => setLoading(false)}
+                />
+                <div className="sk-img" />
+                <div className="sk-lines">
+                  <div className="sk-line w-80" />
+                  <div className="sk-line w-60" />
+                  <div className="sk-line w-40" />
+                </div>
+              </div>
+            ) : (
+              <>
                 {sortedArticles[0] ? (
                   <Link to={`/platform/article/${sortedArticles[0].id || 0}`} className="news-main-link">
                     <article className="news-main">

@@ -1,103 +1,98 @@
-:root {
-  --alarm-max-width: 90vw;
-  --alarm-padding: clamp(1rem, 4vw, 2rem);
-  --alarm-gap: clamp(1rem, 3vw, 2rem);
-  --alarm-radius: 1rem;
-  --alarm-shadow: 0 0.2rem 0.5rem rgba(0,0,0,0.05);
-  --btn-padding: clamp(0.5rem, 2vw, 1rem);
-  --btn-font: clamp(0.875rem, 2vw, 1rem);
-}
+/* src/styles/Alarm.css */
 
 .alarm-container {
-  max-width: var(--alarm-max-width);
-  margin: clamp(5rem, 10vh, 8rem) auto;
-  padding: 0 var(--alarm-padding);
-  box-sizing: border-box;
+  max-width: 600px;
+  margin: 40px auto;
+  padding: 24px;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
 }
 
 .alarm-title {
-  font-size: clamp(1.5rem, 3vw, 2rem);
-  margin-bottom: var(--alarm-gap);
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 16px;
   color: #092C4C;
   text-align: center;
 }
 
 .btn--notice {
   display: block;
-  margin: 0 auto var(--alarm-gap);
-  padding: var(--btn-padding) clamp(1rem, 3vw, 2rem);
-  background: #6789F7;
-  color: #fff;
-  border: none;
-  border-radius: calc(var(--alarm-radius) / 2);
-  font-size: var(--btn-font);
+  margin: 0 auto 20px auto;
+  padding: 10px 16px;
+  font-size: 14px;
+  background-color: #e9f2ff;
+  color: #003366;
+  border: 1px solid #b3d1ff;
+  border-radius: 6px;
   cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn--notice:hover {
+  background-color: #d6e8ff;
 }
 
 .alarm-empty {
+  font-size: 14px;
   text-align: center;
-  color: #aaa;
-  font-size: var(--btn-font);
+  color: #666;
+}
+
+.alarm-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .alarm-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: #F6FAFD;
-  border: 1px solid #EAEEF4;
-  padding: var(--alarm-padding);
-  border-radius: var(--alarm-radius);
-  margin-bottom: var(--alarm-gap);
-  box-shadow: var(--alarm-shadow);
+  background: #f8fafc;
+  border: 1px solid #eaedf2;
+  border-radius: 6px;
+  padding: 10px 12px;
 }
 
 .alarm-item__info {
   display: flex;
   align-items: center;
-  gap: clamp(0.5rem, 2vw, 1rem);
+  gap: 10px;
 }
 
 .alarm-item__icon {
-  flex-shrink: 0;
-  font-size: clamp(1.25rem, 3vw, 1.5rem);
-  color: #092C4C;
+  color: #0073e6;
+  font-size: 20px;
+}
+
+.alarm-item__text {
+  display: flex;
+  flex-direction: column;
 }
 
 .alarm-item__message {
-  font-size: clamp(1rem, 2vw, 1.125rem);
+  font-size: 14px;
   color: #092C4C;
   margin: 0;
 }
 
 .alarm-item__time {
-  font-size: clamp(0.75rem, 1.5vw, 0.875rem);
-  color: #888;
-  margin: clamp(0.25rem, 1vw, 0.5rem) 0 0;
+  font-size: 12px;
+  color: #666;
+  margin-top: 2px;
 }
 
 .alarm-item__delete {
   background: none;
   border: none;
-  color: #999;
+  color: #888;
   cursor: pointer;
-  font-size: clamp(1rem, 2vw, 1.25rem);
+  padding: 4px;
+  transition: color 0.2s;
 }
 
-@media (max-width: 768px) {
-  .alarm-container {
-    padding: 0 clamp(1rem, 5vw, 1.5rem);
-  }
-  .alarm-title {
-    font-size: clamp(1.25rem, 4vw, 1.75rem);
-  }
-  .alarm-item {
-    flex-direction: column;
-    align-items: flex-start;
-    padding: clamp(0.75rem, 3vw, 1.5rem);
-  }
-  .alarm-item__delete {
-    align-self: flex-end;
-    margin-top: clamp(0.5rem, 2vw, 1rem);
-  }
+.alarm-item__delete:hover {
+  color: #cc0000;
 }

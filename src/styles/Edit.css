@@ -18,7 +18,8 @@
 /* 컨테이너 */
 .edit-container {
   margin-top: 60px;
-  margin-left: 3px;
+  margin-left: 10px;
+  margin-right: 30px;
   position: relative;
   width: 100%;
   max-width: 1400px;             /* 1200 → 1120 가독성 향상 */
@@ -61,7 +62,6 @@
   font-size: 20px; font-weight: 700; letter-spacing: -.2px;
 }
 
-
 /* 폼 */
 .edit-main { flex: 1; }
 .edit-form { margin-top: 32px; display: flex; flex-direction: column; gap: 18px; }
@@ -73,7 +73,7 @@
 .form-group select,
 .form-group textarea {
   margin-top: 8px;
-  width: 97%;                   
+  width: 97%;
   padding: 12px 16px;
   border-radius: 10px;
   border: 1px solid var(--ed-border);
@@ -171,14 +171,19 @@
 .rb-dot { width: 6px; height: 6px; border-radius: 50%; background: #ff5a5a; display: inline-block; }
 .rb-hot-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
 
-/* CSV 토글 버튼 (한 번만 정의) 
+/* CSV 토글 버튼 (활성화) */
 .csv-toggle-btn {
-  margin-top: 8px; padding: 8px 16px; font-size: 1rem; font-weight: bold;
-  background: #fff; color: #007bff; border: 1.5px solid #007bff; border-radius: 10px;
-  cursor: pointer; transition: background .2s ease, color .2s ease, transform .08s ease;
+  margin-top: 8px;
+  padding: 8px 14px;
+  font-size: 14px; font-weight: 600;
+  background: #fff; color: var(--ed-primary);
+  border: 1.5px solid var(--ed-primary);
+  border-radius: 10px; cursor: pointer;
+  transition: background .2s ease, color .2s ease, transform .08s ease, box-shadow .12s ease;
 }
-.csv-toggle-btn:hover { background: #007bff; color: #fff; }
-.csv-toggle-btn:active { transform: translateY(1px); }*/
+.csv-toggle-btn:hover { background: var(--ed-primary); color: #fff; box-shadow: 0 6px 14px rgba(81,78,243,.12); }
+.csv-toggle-btn:active { transform: translateY(1px); }
+.csv-toggle-btn:focus-visible { outline: 3px solid rgba(81,78,243,.25); outline-offset: 2px; }
 
 /* 타이틀 추천 리스트 */
 .title-recommendations { margin-top: 10px; display: flex; flex-direction: column; gap: 8px; }
@@ -202,3 +207,216 @@
 @media (max-width: 480px) {
   .edit-header { flex-direction: column; align-items: flex-start; gap: 8px; }
 }
+
+/* ===============================
+   ▼ 토글 버튼(공용/Rightbar용)
+   =============================== */
+
+/* 공용 토글 버튼 (pill 버튼) */
+.toggle-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 8px 14px;
+  border: 1px solid var(--ed-border);
+  background: #fff; color: var(--ed-text);
+  border-radius: 999px; cursor: pointer;
+  transition: background .15s ease, box-shadow .15s ease, transform .08s ease, border-color .15s ease;
+  user-select: none;
+}
+.toggle-btn:hover { background:#fbfdff; box-shadow: 0 4px 10px rgba(0,0,0,.04); }
+.toggle-btn:active { transform: translateY(1px); }
+.toggle-btn:focus-visible { outline: 3px solid rgba(81,78,243,.22); outline-offset: 2px; }
+.toggle-btn .icon { width: 16px; height: 16px; display:inline-block; }
+.toggle-btn.is-active {
+  border-color: var(--ed-primary);
+  background: #eef1ff; color: var(--ed-primary);
+}
+
+/* 스위치 형태 (iOS 스타일) */
+.switch {
+  --h: 22px; --w: 40px;
+  position: relative; display: inline-flex; align-items: center; gap: 8px; cursor: pointer;
+}
+.switch input { position: absolute; opacity: 0; width: 0; height: 0; }
+.switch-track {
+  width: var(--w); height: var(--h);
+  background: #e8edf6; border-radius: 999px; position: relative;
+  transition: background .15s ease;
+  border: 1px solid #dbe4f1;
+}
+.switch-thumb {
+  --d: calc(var(--h) - 6px);
+  width: var(--d); height: var(--d);
+  position: absolute; top: 50%; left: 3px; transform: translateY(-50%);
+  background: #fff; border-radius: 50%; box-shadow: 0 2px 6px rgba(0,0,0,.08);
+  transition: left .18s ease;
+}
+.switch input:checked + .switch-track { background: #dfe4ff; border-color: #c8d0ff; }
+.switch input:checked + .switch-track .switch-thumb { left: calc(100% - var(--d) - 3px); }
+
+/* Rightbar 토글 위치 유틸: 헤더 우측에 배치할 때 */
+.rb-toggle {
+  display: flex; align-items: center; gap: 10px;
+}
+@media (max-width: 1120px){
+  .rb-toggle { display: none; } /* 1열 모드에서는 Rightbar 자체가 숨김 */
+}
+
+/* Rightbar 전용 FAB(떠있는 버튼) 옵션 — 필요 시 사용 */
+.rb-toggle-fab {
+  position: sticky; top: 8px; align-self: start;
+  display: inline-flex; z-index: 2;
+}
+
+/* RB 접힘 상태에 따른 라벨 토글 (아이콘/라벨을 상황별로 바꾸고 싶을 때) */
+.rb-toggle-label-open { display: none; }
+.edit-layout.rb-collapsed .rb-toggle-label-open { display: inline; }
+.edit-layout.rb-collapsed .rb-toggle-label-close { display: none; }
+
+/* 작은 X 버튼 (로딩/스켈레톤 닫기 등 공용) */
+.btn-x-close {
+  width: 28px; height: 28px; border-radius: 50%;
+  border: 1px solid var(--ed-border); background: #fff; color: var(--ed-text);
+  display: inline-flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: background .15s, transform .08s, box-shadow .12s;
+}
+.btn-x-close:hover { background: #f7f9ff; box-shadow: 0 4px 10px rgba(0,0,0,.04); }
+.btn-x-close:active { transform: translateY(1px); }
+.btn-x-close:focus-visible { outline: 3px solid rgba(81,78,243,.25); outline-offset: 2px; }
+
+/* ==========================================
+   ▼ Edit2 전용 오버라이드 (Edit1/3 영향 없이)
+   ※ Edit2 루트에 className="edit2" 추가
+   ========================================== */
+
+.edit2 *, .edit2 *::before, .edit2 *::after { box-sizing: border-box; }
+
+.edit2 .edit-container {
+  max-width: 1024px !important;   /* 1360/1400 → 1024로 줄이기 */
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+.edit2 .edit-layout {
+  grid-template-columns: minmax(0,1fr) 320px !important;
+}
+
+.edit2 .edit-main {
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+.edit2 .rightbar-shell {
+  min-width: 0;
+  max-width: 320px;
+  width: 100%;
+}
+
+.edit2 .form-group input,
+.edit2 .form-group select,
+.edit2 .form-group textarea {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+.edit2 .file-upload-label {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+.edit2 .edit-container img,
+.edit2 .edit-container video,
+.edit2 .edit-container canvas {
+  max-width: 100%;
+  height: auto;
+}
+.edit2 .edit-container table {
+  width: 100%;
+  max-width: 100%;
+  border-collapse: collapse;
+}
+.edit2 .edit-container .scroll-x { overflow-x: auto; }
+
+.edit2 .rb-card pre,
+.edit2 .rb-card code {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+@media (max-width: 1120px){
+  .edit2 .edit-layout { grid-template-columns: 1fr !important; gap: 16px; }
+  .edit2 .rightbar-shell { display: none !important; }
+}
+
+
+/* ==========================================
+   ▼ Edit2 Compact Override (크기·여백·폰트 축소)
+   ※ Edit2 루트에 className="edit2"가 있어야 적용됨
+   ========================================== */
+
+/* 전체 타이포 약간 축소 */
+.edit2 { font-size: 15px; } /* 기본 16px 가정 → 15px로 (-6%) */
+
+/* 컨테이너 폭/패딩 줄이기 */
+.edit2 .edit-container{
+  max-width: 1120px !important;      /* 1400 → 1120 */
+  padding: 24px 24px 20px !important; /* 32/32/28 → 24/24/20 */
+}
+
+/* 레이아웃 컴팩트: 우측 사이드 폭/갭 축소 */
+.edit2 .edit-layout{
+  grid-template-columns: minmax(0,1fr) 280px !important; /* 320 → 280 */
+  gap: 16px !important;                                   /* 24 → 16 */
+}
+.edit2 .rightbar-shell{ max-width: 280px !important; }
+
+/* 헤더 타이포/마진 축소 */
+.edit2 .edit-header{ margin-bottom: 14px !important; padding-bottom: 10px !important; }
+.edit2 .edit-header h2{ font-size: 18px !important; }
+
+/* 폼 간격/인풋 사이즈 축소 */
+.edit2 .edit-form{ gap: 14px !important; }                /* 18 → 14 */
+.edit2 .form-group label{ font-weight: 700 !important; }  /* 800 → 700로 살짝 */
+.edit2 .form-group input,
+.edit2 .form-group select,
+.edit2 .form-group textarea{
+  padding: 10px 12px !important;  /* 12x16 → 10x12 */
+  font-size: 13px !important;     /* 14 → 13 */
+}
+.edit2 .form-group textarea{ height: 96px !important; }   /* 120 → 96 */
+
+/* 태그/메타 요소도 약간씩 축소 */
+.edit2 .tag{ padding: 3px 10px !important; font-size: 13px !important; }
+
+/* 업로드 드롭존 높이 축소 */
+.edit2 .file-upload-label{ height: 96px !important; }     /* 120 → 96 */
+
+/* 버튼 컴팩트 */
+.edit2 .button-white, 
+.edit2 .btn-primary, 
+.edit2 .button-primary{
+  padding: 8px 18px !important;   /* 10x24 → 8x18 */
+  font-size: 14px !important;
+  border-radius: 999px !important;
+}
+.edit2 .actions, 
+.edit2 .edit-actions{
+  gap: 10px !important;           /* 12 → 10 */
+  margin-top: 24px !important;    /* 32 → 24 */
+  margin-right: 12px !important;  /* 16 → 12 */
+}
+
+/* 사이드 카드 여백/폰트 살짝 축소 */
+.edit2 .rb-card{ padding: 12px !important; margin-bottom: 10px !important; }
+.edit2 .rb-card-header h4{ font-size: 12px !important; }
+.edit2 .rb-hot-item{ font-size: 12.5px !important; padding: 5px 4px !important; }
+
+/* 반응형도 같이 조정 (태블릿 이하) */
+@media (max-width: 1120px){
+  .edit2 .edit-container{ max-width: 100% !important; }
+  .edit2 .edit-layout{ grid-template-columns: 1fr !important; gap: 14px !important; }
+}
+@media (max-width: 768px){
+  .edit2 .edit-container{ padding: 16px !important; } /* 20 → 16 */
+}
+
+
