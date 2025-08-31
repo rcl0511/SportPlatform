@@ -33,6 +33,24 @@ function trySetItemWithEvict(key, value, evictFn) {
   }
 }
 
+// 🔒 태그 안전 파서 (문자열/JSON 둘 다 대응)
+function parseTagsSafely(raw) {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) return parsed.map(String).filter(Boolean);
+  } catch {
+    if (typeof raw === 'string') {
+      return raw
+        .split(/[,\s]+/)
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .slice(0, 12);
+    }
+  }
+  return [];
+}
+
 const TEAM_KEYWORDS = [
   'LG 트윈스','두산 베어스','삼성 라이온즈','기아 타이거즈','SSG 랜더스','NC 다이노스','한화 이글스','롯데 자이언츠','키움 히어로즈','KT WIZ','KT 위즈','KT',
   'LG','두산','삼성','기아','SSG','NC','한화','롯데','키움'
@@ -74,23 +92,17 @@ const Result = () => {
     setReportContent(localStorage.getItem('edit_content') || '내용이 없습니다.');
     setEditableDate(new Date().toISOString().slice(0, 10));
 
-    // AI에서 생성된 태그들 로드 (우선 사용)
-    const aiTagsRaw = localStorage.getItem('edit_tags');
-    console.log('🔍 localStorage에서 읽은 원본 태그 데이터:', aiTagsRaw);
-    
-    const aiTags = JSON.parse(aiTagsRaw || '[]');
-    console.log('🔄 파싱된 AI 태그 배열:', aiTags, '(길이:', aiTags.length, ')');
-    
+    // AI에서 생성된 태그들 로드 (우선 사용: 안전 파서)
+    const aiTags = parseTagsSafely(localStorage.getItem('edit_tags'));
     if (aiTags.length > 0) {
-      console.log('🏷️ AI 생성 태그 로드 성공! 태그들:', aiTags);
       setSuggestedTags(aiTags);
       setSelectedTags(aiTags.slice(0, 5)); // 처음 5개를 기본 선택
-    } else {
-      console.log('📝 AI 태그가 없어서 로컬 규칙 기반 태그를 사용합니다.');
     }
 
     // AI에서 생성된 캡션들 로드 (필요시 활용)
-    const aiCaptions = JSON.parse(localStorage.getItem('edit_captions') || '{}');
+    let aiCaptions = {};
+    try { aiCaptions = JSON.parse(localStorage.getItem('edit_captions') || '{}'); }
+    catch { aiCaptions = {}; }
     if (Object.keys(aiCaptions).length > 0) {
       console.log('💬 AI 생성 캡션:', aiCaptions);
     }
@@ -121,13 +133,10 @@ const Result = () => {
     setEditableDept(userInfo.department || '');
   }, [userInfo]);
 
-  // 🔹 간단 “AI” 태그 추천(로컬/규칙 기반)
+  // 🔹 간단 “AI” 태그 추천(로컬/규칙 기반) – AI 태그 없을 때만 사용
   const makeSuggestions = useMemo(() => {
     return (title, content) => {
-      const preset = JSON.parse(localStorage.getItem('ai_tag_suggestions') || '[]')
-        .map((t) => String(t).trim())
-        .filter(Boolean);
-
+      const preset = parseTagsSafely(localStorage.getItem('ai_tag_suggestions'));
       const text = `${title} ${content}`.toLowerCase();
       const set = new Set();
 
@@ -158,23 +167,12 @@ const Result = () => {
 
   // 추천 태그 계산 (AI 태그가 없을 때만)
   useEffect(() => {
-    // AI 태그가 이미 있으면 로컬 규칙 기반 태그 생성 건너뛰기
-    const aiTagsRaw = localStorage.getItem('edit_tags');
-    const aiTags = JSON.parse(aiTagsRaw || '[]');
-    console.log('🔎 태그 계산 useEffect - localStorage 확인:', { 
-      raw: aiTagsRaw, 
-      parsed: aiTags, 
-      length: aiTags.length 
-    });
-    
+    const aiTags = parseTagsSafely(localStorage.getItem('edit_tags'));
     if (aiTags.length > 0) {
-      console.log('🤖 AI 태그가 있어서 로컬 태그 생성을 건너뜁니다:', aiTags);
+      // 이미 AI 태그가 있으므로 규칙 기반 생성을 스킵
       return;
     }
-
-    console.log('📋 AI 태그가 없어서 로컬 규칙 기반 태그를 생성합니다.');
     const recs = makeSuggestions(reportTitle, reportContent);
-    console.log('📝 로컬 규칙으로 생성된 태그:', recs);
     setSuggestedTags(recs);
     setSelectedTags((prev) => (prev.length ? prev : recs.slice(0, 3)));
   }, [reportTitle, reportContent, makeSuggestions]);
@@ -202,7 +200,6 @@ const Result = () => {
     const existing = JSON.parse(localStorage.getItem('saved_files') || '[]');
     const id = Date.now();
 
-    // saved_files에는 미리보기만(본문 전체/이미지는 별도 키에 저장)
     const preview = (reportContent || '').slice(0, PREVIEW_LEN);
 
     const newArticleMeta = {
@@ -224,7 +221,6 @@ const Result = () => {
       `article:${id}`,
       JSON.stringify(fullPayload),
       () => {
-        // 공간 확보: saved_files에서 가장 오래된 것 하나 제거 + 대응 본문 제거
         const metas = JSON.parse(localStorage.getItem('saved_files') || '[]');
         if (metas.length > 0) {
           const last = metas.pop();
@@ -258,7 +254,6 @@ const Result = () => {
       const final = trySetItemWithEvict('saved_files', JSON.stringify([newArticleMeta, ...existing]), null);
       if (!final) {
         alert('저장 공간이 부족합니다. 불필요한 기사/이미지를 지우고 다시 시도하세요.');
-        // 본문은 이미 article:<id>로 들어갔을 수 있으니 정리
         localStorage.removeItem(`article:${id}`);
         return;
       }
@@ -428,10 +423,9 @@ const Result = () => {
         <div className="tag-editor">
           <div className="tag-editor__row">
             <h4>
-              {JSON.parse(localStorage.getItem('edit_tags') || '[]').length > 0 
-                ? '🤖 AI 생성 태그' 
-                : '📋 추천 태그'
-              }
+              {parseTagsSafely(localStorage.getItem('edit_tags')).length > 0
+                ? '🤖 AI 생성 태그'
+                : '📋 추천 태그'}
             </h4>
             <div className="tag-cloud">
               {suggestedTags.map((t) => {

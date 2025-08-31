@@ -188,13 +188,12 @@ export default function Platform() {
           >
             <div
               className="slide-track slide-track--paged"
-              style={{
-                width: `${totalSlides * 100}%`,
-                transform: `translateX(-${(100 / totalSlides) * slideIndex}%)`,
-              }}
+              
+                style={{ transform: `translateX(-${slideIndex * 100}%)` }}
+              
             >
               {pages.map((page, pIdx) => (
-                <div className="slide-page" key={pIdx} style={{ width: `${100 / totalSlides}%` }}>
+                <div className="slide-page" key={pIdx} style={{ '--items-per': ITEMS_PER_SLIDE }}>
                   {page.map((m, idx) => (
                     <article key={`${pIdx}-${m.id}-${idx}`} className="match-card" aria-label={`${m.league} ${m.homeTeam} vs ${m.awayTeam}`}>
                       <div className="match-head">
@@ -285,16 +284,26 @@ export default function Platform() {
 
             {/* 스켈레톤 */}
             {loading ? (
-              <div className="news-main skeleton" aria-hidden>
-                <div className="sk-img" />
-                <div className="sk-lines">
-                  <div className="sk-line w-80" />
-                  <div className="sk-line w-60" />
-                  <div className="sk-line w-40" />
-                </div>
-              </div>
-            ) : (
-              <>
+  <div className="news-main skeleton" aria-hidden>
+    {/* ⬇️ 로딩 닫기 버튼 추가 */}
+    <button
+      type="button"
+      className="btn-x-close"
+      aria-label="로딩 닫기"
+      onClick={() => setLoading(false)}
+    >
+      
+    </button>
+
+    <div className="sk-img" />
+    <div className="sk-lines">
+      <div className="sk-line w-80" />
+      <div className="sk-line w-60" />
+      <div className="sk-line w-40" />
+    </div>
+  </div>
+) : (
+  <>
                 {sortedArticles[0] ? (
                   <Link to={`/platform/article/${sortedArticles[0].id || 0}`} className="news-main-link">
                     <article className="news-main">
@@ -379,7 +388,7 @@ export default function Platform() {
               emptyText="아직 저장된 기사가 없어요."
               renderItem={(a) => (
                 <li key={a.id || a.title} className="saved-item">
-                  <Link to={'/platform/article/${id}'} className="saved-link">
+                  <Link to={`/platform/article/${a.id || 0}`} className="saved-link">
                     <span className="dot" /> {cut(a.title || '제목 없음', 36)}
                   </Link>
                 </li>

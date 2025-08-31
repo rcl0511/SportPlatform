@@ -1,4 +1,3 @@
-// src/pages/ArticleDetail.jsx
 import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import '../styles/ArticleDetail.css';
@@ -7,16 +6,21 @@ import { FaHeart, FaRegCommentDots, FaShareAlt, FaTrashAlt } from 'react-icons/f
 export default function ArticleDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+
   const [article, setArticle] = useState(null);
   const [comments, setComments] = useState([]);
   const [authorInput, setAuthorInput] = useState('');
   const [newComment, setNewComment] = useState('');
   const [toast, setToast] = useState('');
 
+  // HTML 문자열인지 간단 판별
+  const isLikelyHTML = (str) =>
+    typeof str === 'string' && /<\s*[a-z][\s\S]*>/i.test(str);
+
   // 초기 로드
   useEffect(() => {
     const articles = JSON.parse(localStorage.getItem('saved_files') || '[]');
-    const found = articles.find(a => a.id === Number(id));
+    const found = articles.find((a) => a.id === Number(id));
 
     if (!found) {
       alert('해당 기사를 찾을 수 없습니다.');
@@ -24,10 +28,11 @@ export default function ArticleDetail() {
       return;
     }
 
+    // 조회수 +1
     const next = { ...found, views: (found.views || 0) + 1 };
     localStorage.setItem(
       'saved_files',
-      JSON.stringify(articles.map(a => (a.id === next.id ? next : a)))
+      JSON.stringify(articles.map((a) => (a.id === next.id ? next : a)))
     );
 
     setArticle(next);
@@ -37,7 +42,7 @@ export default function ArticleDetail() {
     setAuthorInput(user ? `${user.firstName || ''}${user.lastName || ''}` : '');
   }, [id, navigate]);
 
-  // 좋아요(중복 방지)
+  // 좋아요(중복 방지: 세션 기준)
   const likeKey = useMemo(() => `reacted_${id}_like`, [id]);
   const handleLike = () => {
     if (!article || sessionStorage.getItem(likeKey) === 'true') return;
@@ -47,7 +52,7 @@ export default function ArticleDetail() {
     const stored = JSON.parse(localStorage.getItem('saved_files') || '[]');
     localStorage.setItem(
       'saved_files',
-      JSON.stringify(stored.map(a => (a.id === updated.id ? updated : a)))
+      JSON.stringify(stored.map((a) => (a.id === updated.id ? updated : a)))
     );
     sessionStorage.setItem(likeKey, 'true');
   };
@@ -69,7 +74,7 @@ export default function ArticleDetail() {
 
   const handleDeleteComment = (cid) => {
     if (!article) return;
-    const next = comments.filter(c => c.id !== cid);
+    const next = comments.filter((c) => c.id !== cid);
     setComments(next);
     localStorage.setItem(`comments_${article.id}`, JSON.stringify(next));
   };
@@ -101,6 +106,12 @@ export default function ArticleDetail() {
     navigate('/');
   };
 
+  // 상세 본문: fullContent 우선, 없으면 content
+  const fullText = useMemo(() => {
+    if (!article) return '';
+    return article.fullContent || article.content || '';
+  }, [article]);
+
   if (!article) return <div className="article-loading">Loading…</div>;
 
   return (
@@ -113,7 +124,7 @@ export default function ArticleDetail() {
         {/* 제목 */}
         <h1 className="article__title">{article.title}</h1>
 
-        {/* 메타 + 기자 박스 한 줄 정렬 */}
+        {/* 메타 */}
         <div className="article__meta">
           <div className="meta__left">
             <div className="reporter">
@@ -134,31 +145,33 @@ export default function ArticleDetail() {
             </div>
           </div>
           <div className="meta__right">
-            <span> {article.date}</span>
-            <span> {article.views?.toLocaleString()} views</span>
+            <span>{article.date}</span>
+            <span>{(article.views || 0).toLocaleString()} views</span>
           </div>
         </div>
 
-        {/* 대표 이미지 (본문 내 중앙) */}
+        {/* 대표 이미지 */}
         {article.image && (
           <figure className="feature">
-            <img
-              src={article.image}
-              alt="기사 이미지"
-              className="feature__img"
-            />
+            <img src={article.image} alt="기사 이미지" className="feature__img" />
           </figure>
         )}
 
         {/* 본문 */}
         <div className="article__body">
-          <p>{article.content}</p>
+          {isLikelyHTML(fullText) ? (
+            <div dangerouslySetInnerHTML={{ __html: fullText }} />
+          ) : (
+            fullText
+              .split(/\n{2,}/) // 빈 줄 기준 단락
+              .map((para, i) => <p key={i}>{para}</p>)
+          )}
         </div>
 
         {/* 태그 */}
         {!!article.tags?.length && (
           <div className="tags">
-            {article.tags.map(tag => (
+            {article.tags.map((tag) => (
               <button key={tag} className="tag" onClick={() => handleTagClick(tag)}>
                 #{tag}
               </button>
@@ -197,13 +210,13 @@ export default function ArticleDetail() {
             className="comment-author"
             placeholder="작성자 (선택)"
             value={authorInput}
-            onChange={e => setAuthorInput(e.target.value)}
+            onChange={(e) => setAuthorInput(e.target.value)}
           />
           <textarea
             className="comment-input"
             placeholder="댓글을 입력하세요 (Enter 등록, Shift+Enter 줄바꿈)"
             value={newComment}
-            onChange={e => setNewComment(e.target.value)}
+            onChange={(e) => setNewComment(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
@@ -220,7 +233,7 @@ export default function ArticleDetail() {
           {comments.length === 0 ? (
             <div className="comment-empty">첫 댓글을 남겨보세요!</div>
           ) : (
-            comments.map(c => (
+            comments.map((c) => (
               <div key={c.id} className="comment">
                 <div className="comment__avatar" />
                 <div className="comment__body">

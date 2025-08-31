@@ -2,6 +2,11 @@
   --header-h: 64px;        /* 헤더 높이 */
   --sidebar-w: 0;          /* 사이드바 너비(없으면 0) */
   --logo-size: 42px;       /* 로고 원 크기 */
+
+  /* ✅ 버튼 공통 사이즈 */
+  --btn-h: 38px;
+  --btn-px: 14px;
+  --btn-minw: 96px;        /* 동일 폭 원치 않으면 이 줄 삭제해도 됨 */
 }
 
 /* 헤더 바 */
@@ -21,8 +26,6 @@
   margin-right: 8px;
   margin-left: 40px;
 }
-
-
 
 /* 내부 래퍼 */
 .hdr__inner{
@@ -99,9 +102,16 @@
   box-shadow: 0 0 0 3px rgba(106,102,255,.18);
 }
 
-/* 버튼 공통 */
+/* 버튼 공통 - ✅ 크기/정렬 고정 */
 .btn{
-  padding: .55rem 1.05rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  height: var(--btn-h);
+  padding: 0 var(--btn-px);
+  min-width: var(--btn-minw);
+
   font-size: .93rem;
   font-weight: 700;
   border-radius: 999px;
@@ -110,6 +120,7 @@
   transition: all .18s ease;
   line-height: 1;
   border: 1px solid transparent;
+  box-sizing: border-box;
 }
 
 /* 프라이머리 */
@@ -138,5 +149,5 @@
 }
 @media (max-width: 520px){
   .hdr__title{ font-size: 1.2rem; }
-  .btn{ padding: .48rem .9rem; font-size: .9rem; }
+  .btn{ min-width: 0; }          /* 모바일에서 동일 폭 해제하고 싶으면 */
 }

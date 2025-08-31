@@ -29,35 +29,49 @@
 }
 .slide-button:hover{ background:#f2f6ff; } /* 탭/네비게이션은 호버 유지 */
 
-/* 슬라이드 창: X만 숨기고 Y는 노출 (카드 하단 잘림 방지) */
-.slide-window{ overflow-x:hidden; overflow-y:visible; }
-.slide-track{ display:flex; gap:16px; padding:0 2px; }
-
-/* 페이지 단위 슬라이드 트랙 */
-.slide-track.slide-track--paged {
-  display: flex;
-  transition: transform .35s ease;
-  will-change: transform;
+/* 슬라이드 창: 페이지 외부는 완전히 숨김(겹침/비침 방지) */
+.slide-window{
+  overflow: hidden;
+  position: relative;
 }
 
-/* 각 페이지(슬라이드) */
-.slide-page {
-  display: flex;
-  gap: 50px;
-  padding: 0 2px;
-  /* width는 inline style로 % 지정됨 */
+/* 트랙: 페이지 단위 이동. gap은 페이지 내부에서만 사용 */
+.slide-track{
+  display:flex;
+  padding:0;           /* 페이지가 100%를 차지하므로 트랙 padding/gap 제거 */
+}
+.slide-track.slide-track--paged{
+  display:flex;
+  gap:0;
+  transition: transform .35s ease;
+  will-change: transform;
+  align-items:stretch;
+}
+
+/* 각 페이지(슬라이드): 뷰포트 100% 고정 + 내부 그리드 */
+.slide-page{
+  flex:0 0 100%;
+  width:100%;
+  box-sizing:border-box;
+  display:grid;
+  grid-auto-rows: 1fr;
+  grid-template-columns: repeat(var(--items-per, 5), minmax(0, 1fr));
+  gap:18px;
+  padding: 0 2px;   /* 필요시 살짝 여백 */
 }
 
 /* 비활성 버튼 흐리게 */
 .slide-button:disabled { opacity:.5; cursor:not-allowed; }
 
+/* ===== 카드 ===== */
 .match-card{
   background:#fff; 
   border-radius:12px; 
   padding:14px;
-  width: clamp(160px, 18vw, 220px);  /* 카드 반응형 너비 */
   box-shadow: 0 2px 8px rgba(0,0,0,.05);
-  flex:0 0 auto;
+  display:flex;              /* 하단 버튼 고정 */
+  flex-direction:column;
+  min-width:0;               /* ellipsis 동작 */
 }
 
 .match-card.placeholder{ 
@@ -133,7 +147,7 @@
   box-shadow:0 2px 6px rgba(230,0,0,.2);
 }
 
-/* 결과 확인 (그린) */
+/* 결과 확인 (퍼플) */
 .btn--result{
   background:#514EF3;
   color:#fff;
@@ -178,7 +192,7 @@
   padding:16px; background:#fff; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,.05);
   transition: transform .18s ease;
 }
-.news-main:hover{ transform: translateY(-3px); } /* 뉴스 카드 hover 유지(요청 없었음) */
+.news-main:hover{ transform: translateY(-3px); } /* 뉴스 카드 hover 유지 */
 
 .news-main-img{
   width: clamp(160px, 22vw, 240px);
@@ -264,5 +278,30 @@
   .news-main{ flex-direction:column; align-items:stretch; }
   .news-main-img{ width:100%; height: clamp(160px, 40vw, 220px); }
 }
+
+/* 버튼 폭 - 모바일에서 가득 차게 */
 .match-actions { justify-content: stretch; }
 .btn { width: 100%; min-width: 0; }
+
+/* 스켈레톤 카드 위에 X 버튼 */
+.news-main.skeleton { position: relative; }
+.btn-x-close{
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #e5ebf4;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 18px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 2;
+}
+.btn-x-close:hover { background: #f7f9fc; }
+.btn-x-close:active { transform: translateY(1px); }
+

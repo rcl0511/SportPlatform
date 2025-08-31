@@ -1,30 +1,31 @@
-.views-chart-card {
-  background-color: #ffffff;
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  margin-top: 20px;
-  transition: box-shadow 0.3s ease;
+/* ViewsChart 루트: 카드의 남는 높이를 모두 차지하도록 */
+.views-chart{
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0; /* overflow 계산 이슈 방지 */
 }
 
-.views-chart-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+/* 실제 차트 영역이 커지도록 */
+.views-chart .chart-area{
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
-.views-chart-card h3 {
-  font-size: 1.1rem;
-  margin-bottom: 16px;
-  color: #333333;
+/* ResponsiveContainer가 100% 높이를 인식하도록 안전망 */
+.views-chart .recharts-responsive-container{
+  width: 100%;
+  height: 100% !important;
 }
 
-.view-filter-buttons {
+/* 필터 버튼 UI (원래 사용하던 스타일 유지 가능) */
+.view-filter-buttons{
   display: flex;
   justify-content: flex-end;
   gap: 8px;
   margin-bottom: 12px;
 }
-
-.view-filter-buttons button {
+.view-filter-buttons button{
   padding: 6px 12px;
   border: 1px solid #cccccc;
   border-radius: 8px;
@@ -34,15 +35,13 @@
   color: #555555;
   transition: all 0.2s ease-in-out;
 }
-
-.view-filter-buttons button:hover {
+.view-filter-buttons button:hover{
   background-color: #eaeaea;
   border-color: #999999;
 }
-
-.view-filter-buttons button.active {
+.view-filter-buttons button.active{
   background-color: #514EF3;
-  color: white;
+  color: #fff;
   border-color: #514EF3;
-  font-weight: bold;
+  font-weight: 700;
 }

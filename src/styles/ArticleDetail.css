@@ -39,7 +39,10 @@
 
 /* 좌: 기자 정보, 우: 날짜/뷰 */
 .meta__left{display:flex;align-items:center;gap:12px;min-width:0}
-.meta__right{display:flex;align-items:center;gap:10px;color:var(--sub);font-size:13px;white-space:nowrap}
+.meta__right{
+  display:flex;align-items:center;gap:10px;color:var(--sub);font-size:13px;
+  overflow-wrap:anywhere; /* 긴 문자열도 줄바꿈 */
+}
 
 .reporter{display:flex;align-items:center;gap:12px;min-width:0}
 .reporter__img{
@@ -55,7 +58,10 @@
 /* 본문 이미지: 기사 내부 중앙 */
 .feature{margin:14px 0 10px 0;}
 .feature__img{
-  width:100%; max-height: 460px; object-fit: cover;
+  width:100%;
+  max-height: 460px;
+  object-fit: contain;        /* 전체 보이도록 */
+  background: #fff;
   border-radius:12px; border:1px solid #f0f4fa;
 }
 
@@ -129,4 +135,18 @@
   .meta__right{gap:8px}
   .feature__img{max-height:360px}
   .actions-bar{flex-wrap:wrap}
+}
+
+/* === 본문 잘림 방지 & 래핑 보강 (중복 보호) === */
+.article__body,
+.article__body p{
+  display:block !important;
+  
+  -webkit-box-orient:unset !important;
+  max-height:none !important;
+  overflow:visible !important;
+
+  white-space:pre-wrap;
+  word-break:break-word;
+  overflow-wrap:anywhere;
 }
