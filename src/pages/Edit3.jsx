@@ -4,8 +4,6 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { AuthContext } from '../contexts/AuthContext.js';
 import '../styles/Edit3.css';
 
-const AUTO_REFRESH_FLAG = 'edit3_after_reload';
-
 const Edit3 = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -18,10 +16,6 @@ const Edit3 = () => {
   const [reportTags, setReportTags] = useState([]);
   const [reportCaptions, setReportCaptions] = useState({});
   const [today, setToday] = useState('');
-
-  // API 호출/로딩 상태
-  const [isLoading, setIsLoading] = useState(false);
-  const [loadingMsg, setLoadingMsg] = useState('AI가 내용을 생성 중입니다…');
 
   // API 중복 호출 방지
   const hasGeneratedRef = useRef(false);
@@ -38,7 +32,7 @@ const Edit3 = () => {
   const [imageMarginTop, setImageMarginTop] = useState(0);
   const [imageMarginLeft, setImageMarginLeft] = useState(0);
 
-  // 초기 데이터 로딩 & AI 호출 (필요 시 1회 자동 새로고침)
+  // 초기 데이터 로딩 & AI 호출
   useEffect(() => {
     // 기본 설정
     if (topic) setReportTitle(topic);
@@ -54,7 +48,7 @@ const Edit3 = () => {
       })
     );
 
-    // ✅ 새 주제 시작 시, 이전 이미지 관련 잔존값 제거(이전 이미지가 붙는 문제 방지)
+    // 새 주제 시작 시, 이전 이미지 관련 잔존값 제거
     if (topic) {
       [
         'edit_image',
@@ -66,17 +60,9 @@ const Edit3 = () => {
       ].forEach((k) => localStorage.removeItem(k));
     }
 
-    // 새로고침 직후 1회는 API 호출 스킵 (루프 방지)
-    if (sessionStorage.getItem(AUTO_REFRESH_FLAG) === '1') {
-      sessionStorage.removeItem(AUTO_REFRESH_FLAG);
-      return;
-    }
-
     if (!topic || hasGeneratedRef.current) return;
 
     hasGeneratedRef.current = true;
-    setIsLoading(true);
-    setLoadingMsg('AI가 내용을 생성 중입니다… (최대 10~15초)');
 
     const generateReport = async () => {
       try {
@@ -98,9 +84,11 @@ const Edit3 = () => {
 
         console.log('보고서 생성 API 호출 시작:', topic);
 
+        // ✅ 프록시 없이 절대 URL 사용
         const response = await fetch('https://api.jolpai-backend.shop/api/generate-report', {
           method: 'POST',
           body: formData,
+          // mode: 'cors', // 기본이 cors라 생략 가능
         });
 
         if (!response.ok) {
@@ -113,7 +101,7 @@ const Edit3 = () => {
         console.log('🏷️ API 응답 태그 필드:', data.tags);
         console.log('💬 API 응답 캡션 필드:', data.captions);
 
-        // 제목/내용 반영 + ✅ 즉시 저장 (Result가 바로 읽을 수 있게)
+        // 제목/내용 반영 + 즉시 저장 (Result가 바로 읽도록)
         const nextTitle = data.title || topic || '';
         const nextContent = data.content || '';
 
@@ -135,20 +123,11 @@ const Edit3 = () => {
           localStorage.setItem('edit_captions', JSON.stringify(data.captions));
         }
 
-        setLoadingMsg('AI 생성 완료! 화면을 갱신합니다…');
-
-        // ✅ 1회 자동 새로고침 (Result.jsx 등에서 localStorage 값을 확실히 읽도록)
-        sessionStorage.setItem(AUTO_REFRESH_FLAG, '1');
-        setTimeout(() => {
-          window.location.reload();
-        }, 400);
+        // 🔕 자동 새로고침 제거: 화면 상태만 갱신
       } catch (error) {
         console.error('보고서 생성 실패:', error);
-        setLoadingMsg('생성에 실패했습니다. 다시 시도해 주세요.');
         // 실패 시 재시도 허용
         hasGeneratedRef.current = false;
-      } finally {
-        setIsLoading(false);
       }
     };
 
@@ -168,23 +147,6 @@ const Edit3 = () => {
 
   return (
     <div className="editor-container" style={{ paddingRight: sidebarWidth + 20 }}>
-      {/* 로딩 오버레이 */}
-      {isLoading && (
-        <div className="loading-overlay">
-          <div className="loading-box">
-            <div className="spinner" aria-hidden />
-            <div className="loading-text">{loadingMsg}</div>
-            <button
-              className="btn"
-              onClick={() => window.location.reload()}
-              style={{ marginTop: 10 }}
-            >
-              새로고침
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* 유저 정보 */}
       <div className="user-info" style={{ paddingRight: sidebarWidth + 50 }}>
         <div className="row">

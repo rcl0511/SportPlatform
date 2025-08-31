@@ -33,7 +33,7 @@ const Edit2 = () => {
     const fetchTitles = async () => {
       try {
         setLoading(true);
-        const res = await fetch('http://localhost:8000/generate-report', {
+        const res = await fetch('/api/generate-report', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
