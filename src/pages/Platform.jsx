@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import '../styles/Platform.css';
 import { Link, useNavigate } from 'react-router-dom';
 
-const PLACEHOLDER_IMG = '/assets/placeholder.jpg';
+const PLACEHOLDER_IMG = '/assets/KBO.png';
 
 export default function Platform() {
   const navigate = useNavigate();

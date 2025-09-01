@@ -13,14 +13,24 @@ export default function ArticleDetail() {
   const [newComment, setNewComment] = useState('');
   const [toast, setToast] = useState('');
 
-  // HTML 문자열인지 간단 판별
-  const isLikelyHTML = (str) =>
-    typeof str === 'string' && /<\s*[a-z][\s\S]*>/i.test(str);
+  /** 실제 HTML만 허용: 모델 토큰(<|...|>)이나 단순 '<...>' 텍스트는 제외 */
+  const looksLikeHTML = (str) => {
+    if (typeof str !== 'string') return false;
+    if (/<\|/.test(str)) return false; // 모델 토큰 섞이면 텍스트 처리
+    return /<(p|br|strong|em|b|i|ul|ol|li|h[1-6]|blockquote|span|div|hr|img|a)(\s|>)/i.test(str);
+  };
 
   // 초기 로드
   useEffect(() => {
-    const articles = JSON.parse(localStorage.getItem('saved_files') || '[]');
-    const found = articles.find((a) => a.id === Number(id));
+    const numericId = Number(id);
+    if (Number.isNaN(numericId)) {
+      alert('잘못된 문서 ID입니다.');
+      navigate('/platform');
+      return;
+    }
+
+    const metas = JSON.parse(localStorage.getItem('saved_files') || '[]');
+    const found = metas.find((a) => a.id === numericId);
 
     if (!found) {
       alert('해당 기사를 찾을 수 없습니다.');
@@ -28,15 +38,45 @@ export default function ArticleDetail() {
       return;
     }
 
-    // 조회수 +1
-    const next = { ...found, views: (found.views || 0) + 1 };
+    // 조회수 +1 (메타 갱신)
+    const nextMeta = { ...found, views: (found.views || 0) + 1 };
     localStorage.setItem(
       'saved_files',
-      JSON.stringify(articles.map((a) => (a.id === next.id ? next : a)))
+      JSON.stringify(metas.map((a) => (a.id === nextMeta.id ? nextMeta : a)))
     );
 
-    setArticle(next);
-    setComments(JSON.parse(localStorage.getItem(`comments_${next.id}`) || '[]'));
+    // article:<id> 풀텍스트/이미지 시도
+    let full = null;
+    try {
+      full = JSON.parse(localStorage.getItem(`article:${found.id}`) || 'null');
+    } catch { full = null; }
+
+    // ✅ 병합 규칙 (우선순위: article:<id>.content → meta.fullContent → meta.content)
+    const fullContent =
+      (full && typeof full.content === 'string' && full.content)
+      ?? (typeof nextMeta.fullContent === 'string' ? nextMeta.fullContent : undefined)
+      ?? (typeof nextMeta.content === 'string' ? nextMeta.content : '');
+
+    // ✅ 이미지 병합 (TS5076 피하기 위해 ?? 만 사용)
+    const image =
+      (nextMeta.image !== undefined ? nextMeta.image : undefined)
+      ?? (full && typeof full.image === 'string' ? full.image : undefined)
+      ?? (nextMeta.hasImage ? nextMeta.image : undefined)
+      ?? '';
+
+    const merged = { ...nextMeta, fullContent, image };
+
+    // 디버깅 로그(필요 시 콘솔에서 확인)
+    try {
+      console.log('[ArticleDetail] metaLen=%s, fullObj=%o, useLen=%s',
+        (nextMeta.fullContent || nextMeta.content || '').length,
+        full,
+        fullContent.length
+      );
+    } catch {}
+
+    setArticle(merged);
+    setComments(JSON.parse(localStorage.getItem(`comments_${nextMeta.id}`) || '[]'));
 
     const user = JSON.parse(localStorage.getItem('user_info') || 'null');
     setAuthorInput(user ? `${user.firstName || ''}${user.lastName || ''}` : '');
@@ -112,6 +152,21 @@ export default function ArticleDetail() {
     return article.fullContent || article.content || '';
   }, [article]);
 
+  // 안전 삽입용: script/style 제거
+  const sanitizedHTML = useMemo(() => {
+    if (!fullText) return '';
+    return fullText.replace(/<(script|style)[^>]*>[\s\S]*?<\/\1>/gi, '');
+  }, [fullText]);
+
+  // 텍스트 단락 분리(빈 줄 2개 이상), CRLF 정규화
+  const textParagraphs = useMemo(() => {
+    return fullText
+      .replace(/\r\n/g, '\n')
+      .split(/\n{2,}/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+  }, [fullText]);
+
   if (!article) return <div className="article-loading">Loading…</div>;
 
   return (
@@ -159,12 +214,10 @@ export default function ArticleDetail() {
 
         {/* 본문 */}
         <div className="article__body">
-          {isLikelyHTML(fullText) ? (
-            <div dangerouslySetInnerHTML={{ __html: fullText }} />
+          {looksLikeHTML(fullText) ? (
+            <div dangerouslySetInnerHTML={{ __html: sanitizedHTML }} />
           ) : (
-            fullText
-              .split(/\n{2,}/) // 빈 줄 기준 단락
-              .map((para, i) => <p key={i}>{para}</p>)
+            textParagraphs.map((para, i) => <p key={i}>{para}</p>)
           )}
         </div>
 

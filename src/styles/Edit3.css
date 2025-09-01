@@ -36,6 +36,54 @@
   color: #092C4C;
 }
 
+/* ===== 제목 추천 영역 ===== */
+.title-recommendations {
+  background: #fff;
+  border: 1px solid #EAEEF4;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 4px 14px rgba(13, 34, 77, .06);
+  margin-bottom: 16px;
+}
+.title-recommendations h3 {
+  margin: 0 0 10px;
+  font-size: 16px;
+  color: #092C4C;
+}
+.title-loading,
+.title-empty {
+  font-size: 14px;
+  color: #7E92A2;
+  padding: 8px 2px;
+}
+.title-item {
+  border: 1px solid #e5ebf4;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+  font-size: 14px;
+  color: #0c2742;
+  max-width: 100%;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+.title-item:hover {
+  border-color: #cfd9e8;
+  box-shadow: 0 2px 10px rgba(12,39,66,.06);
+}
+.title-item.selected {
+  background: #EEF4FF;
+  border-color: #C8D6FF;
+  box-shadow: 0 2px 10px rgba(49,86,255,.08);
+}
+.title-item:focus-visible {
+  outline: 2px solid #514EF3;
+  outline-offset: 2px;
+}
+
 /* 메인 콘텐츠 */
 .main-content {
   background: white;
@@ -54,11 +102,12 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
 }
 .image-controls label {
   font-size: 14px;
+  color: #092C4C;
 }
-
 
 /* 이미지 래퍼 */
 .image-wrapper {
@@ -67,6 +116,8 @@
 }
 .image-wrapper img {
   border-radius: 8px;
+  max-width: 100%;
+  height: auto;
 }
 
 /* 제목 및 본문 */
@@ -85,6 +136,12 @@
   border: none;
   background: transparent;
   resize: vertical;
+  min-height: 240px;
+}
+.report-textarea:focus {
+  outline: 2px solid #dfe6f5;
+  outline-offset: 6px;
+  border-radius: 6px;
 }
 
 /* 사이드바 */
@@ -116,6 +173,9 @@
   border-top-left-radius: 8px;
   border-bottom-left-radius: 8px;
   z-index: 20;
+  user-select: none;
+  font-weight: 700;
+  color: #092C4C;
 }
 
 /* 하단 버튼 그룹 */
@@ -138,6 +198,12 @@
   font-size: 14px;
   font-weight: 500;
 }
+.btn:hover {
+  filter: brightness(0.97);
+}
+.btn:active {
+  transform: translateY(1px);
+}
 
 /* 파일 선택 버튼 */
 .file-button {
@@ -151,6 +217,9 @@
   font-weight: 500;
   margin-top: 20px;
   margin-bottom: 24px;
+}
+.file-button:hover {
+  filter: brightness(0.97);
 }
 
 /* 로딩 오버레이 */
@@ -177,3 +246,48 @@
 .loading-text{ color:#0f2940; font-weight:700; font-size:.95rem; }
 @keyframes spin{ to { transform: rotate(360deg); } }
 
+/* ===== 작은 화면 대응 ===== */
+@media (max-width: 1024px) {
+  .main-content {
+    width: 100% !important; /* 사이드바가 접히면 본문이 가득 차도록 */
+  }
+  .sidebar {
+    top: 64px;
+    height: calc(100vh - 84px);
+  }
+  .sidebar-toggle {
+    width: 28px;
+    height: 72px;
+  }
+  .title-item {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .editor-container {
+    padding: 14px;
+  }
+  .main-content {
+    padding: 20px;
+    gap: 18px;
+  }
+  .report-title {
+    font-size: 20px;
+  }
+  .report-textarea {
+    font-size: 15px;
+    line-height: 1.7;
+  }
+}
+.report-title-input{
+  width: 100%;
+  font-size: 24px;
+  font-weight: 700;
+  color: #092C4C;
+  border: none;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  outline: none;
+}

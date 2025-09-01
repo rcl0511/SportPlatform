@@ -206,6 +206,7 @@ const Result = () => {
       id,
       title: reportTitle || '제목 없음',
       content: preview,
+      fullContent: reportContent,
       date: editableDate || new Date().toISOString().slice(0, 10),
       reporter: editableName || (userInfo ? `${userInfo.firstName}${userInfo.lastName}` : '기자 미상'),
       department: editableDept || '',

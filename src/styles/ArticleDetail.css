@@ -1,3 +1,10 @@
+/* =========================================
+   ArticleDetail.css (full)
+   - 본문 잘림 방지
+   - HTML 본문 태그 전반 스타일(headi ng/list/blockquote/table/img)
+   - 반응형 보강
+   ========================================= */
+
 /* 기사 레이아웃 */
 .article-wrap{
   --ink:#0f1e2e;
@@ -23,6 +30,7 @@
 .article{
   background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);
   padding: 22px 24px;
+  overflow: visible;            /* 잘림 방지 */
 }
 
 .article__title{
@@ -41,7 +49,7 @@
 .meta__left{display:flex;align-items:center;gap:12px;min-width:0}
 .meta__right{
   display:flex;align-items:center;gap:10px;color:var(--sub);font-size:13px;
-  overflow-wrap:anywhere; /* 긴 문자열도 줄바꿈 */
+  overflow-wrap:anywhere;
 }
 
 .reporter{display:flex;align-items:center;gap:12px;min-width:0}
@@ -60,18 +68,133 @@
 .feature__img{
   width:100%;
   max-height: 460px;
-  object-fit: contain;        /* 전체 보이도록 */
+  object-fit: contain;
   background: #fff;
   border-radius:12px; border:1px solid #f0f4fa;
 }
 
 /* 본문 */
-.article__body{margin-top:8px;}
+.article__body{
+  margin-top:8px;
+  overflow: visible;          /* 잘림 방지 */
+  max-height: none;           /* 잘림 방지 */
+  word-break: break-word;
+  overflow-wrap:anywhere;
+  color:#22364d;
+  font-size:16px;
+  line-height:1.85;
+}
+
+/* p 기본 */
 .article__body p{
   white-space: pre-wrap;
-  line-height: 1.85;
-  font-size: 16px;
-  color: #22364d;
+  margin: 0 0 14px;
+}
+
+/* 헤딩 (HTML 본문 대응) */
+.article__body h1,
+.article__body h2,
+.article__body h3,
+.article__body h4,
+.article__body h5,
+.article__body h6{
+  color:#0c2540;
+  margin:18px 0 10px;
+  line-height:1.35;
+}
+.article__body h1{font-size:26px}
+.article__body h2{font-size:24px}
+.article__body h3{font-size:22px}
+.article__body h4{font-size:20px}
+.article__body h5{font-size:18px}
+.article__body h6{font-size:16px}
+
+/* 목록 */
+.article__body ul,
+.article__body ol{
+  padding-left: 1.2em;
+  margin: 8px 0 14px;
+}
+.article__body li{
+  margin: 4px 0;
+}
+
+/* 인용문 */
+.article__body blockquote{
+  margin: 12px 0;
+  padding: 10px 12px;
+  border-left: 4px solid #dbe8ff;
+  background: #f7fbff;
+  color:#1b2d42;
+  border-radius: 6px;
+}
+
+/* 링크 */
+.article__body a{
+  color:#3e71ff;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* 본문 내부 이미지/미디어 보강 */
+.article__body img,
+.article__body video,
+.article__body iframe{
+  max-width:100%;
+  height:auto;
+  display:block;
+  margin: 12px auto;
+  border-radius:8px;
+}
+.article__body figure{margin:12px 0}
+.article__body figcaption{
+  text-align:center;
+  font-size:13px;
+  color:#6a87a3;
+  margin-top:4px;
+}
+
+/* 코드/프리포맷 */
+.article__body pre,
+.article__body code{
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+.article__body pre{
+  white-space: pre-wrap;
+  background:#0f1e2e;
+  color:#e7eef6;
+  padding:12px;
+  border-radius:8px;
+  overflow:auto;
+}
+.article__body code{
+  background:#f1f5fb;
+  padding:2px 6px;
+  border-radius:6px;
+}
+
+/* 표(테이블) 반응형 */
+.article__body .table-wrap{
+  width:100%;
+  overflow-x:auto;
+}
+.article__body table{
+  width:100%;
+  border-collapse: collapse;
+  margin: 10px 0 14px;
+  background:#fff;
+}
+.article__body th,
+.article__body td{
+  border:1px solid #e7eef6;
+  padding:8px 10px;
+  text-align:left;
+  vertical-align:top;
+}
+.article__body th{
+  background:#f7fbff;
+  font-weight:700;
+  color:#0f3155;
 }
 
 /* 태그 */
@@ -141,11 +264,9 @@
 .article__body,
 .article__body p{
   display:block !important;
-  
   -webkit-box-orient:unset !important;
   max-height:none !important;
   overflow:visible !important;
-
   white-space:pre-wrap;
   word-break:break-word;
   overflow-wrap:anywhere;

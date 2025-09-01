@@ -4,27 +4,41 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { AuthContext } from '../contexts/AuthContext.js';
 import '../styles/Edit3.css';
 
+/* =========================================================
+   🔧 CONFIG — 수기로 쉽게 토글 가능
+   ========================================================= */
+const CONFIG = {
+  REPORT_ENDPOINT: 'https://api.jolpai-backend.shop/api/generate-report',
+  SHOW_RECOMMENDATIONS: true,
+  USE_CAPTION_AS_TITLE_FALLBACK: true,
+  REGENERATE_ON_TITLE_SELECT: false,
+  MAX_RETRIES: 1,
+};
+/* ======================================================= */
+
 const Edit3 = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { topic, base64, fileName } = location.state || {};
+  const { topic: initialTopic, base64, fileName, reset } = location.state || {};
   const { userInfo } = useContext(AuthContext);
 
-  // 리포트 데이터 상태
+  const [isPageLoading, setIsPageLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState('');
+
   const [reportTitle, setReportTitle] = useState('');
   const [reportContent, setReportContent] = useState('');
   const [reportTags, setReportTags] = useState([]);
   const [reportCaptions, setReportCaptions] = useState({});
   const [today, setToday] = useState('');
 
-  // API 중복 호출 방지
+  const [recommendedTitles, setRecommendedTitles] = useState([]);
+  const [selectedTitle, setSelectedTitle] = useState('');
+
   const hasGeneratedRef = useRef(false);
 
-  // 사이드바 상태
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const sidebarWidth = isSidebarOpen ? 600 : 300;
 
-  // 이미지 업로드 및 레이아웃 조정 상태
   const [imageUrl, setImageUrl] = useState(null);
   const [imagePosition, setImagePosition] = useState('top');
   const [imageWidth, setImageWidth] = useState(100);
@@ -32,14 +46,129 @@ const Edit3 = () => {
   const [imageMarginTop, setImageMarginTop] = useState(0);
   const [imageMarginLeft, setImageMarginLeft] = useState(0);
 
-  // 초기 데이터 로딩 & AI 호출
+  const clearAllLocalForEdit = () => {
+    [
+      'edit_subject',
+      'edit_content',
+      'edit_tags',
+      'edit_captions',
+      'edit_image',
+      'edit_image_position',
+      'edit_image_width',
+      'edit_image_align',
+      'edit_image_marginTop',
+      'edit_image_marginLeft',
+    ].forEach((k) => localStorage.removeItem(k));
+  };
+
+  const buildSuggestedTitles = (data, fallbackTopic) => {
+    const out = [];
+    if (Array.isArray(data?.titles) && data.titles.length) return data.titles;
+
+    const caps = data?.captions || {};
+    if (typeof caps === 'object') {
+      if (caps.headline && typeof caps.headline === 'string') out.push(caps.headline);
+      if (caps.summary && typeof caps.summary === 'string') out.push(caps.summary);
+    }
+
+    if (Array.isArray(data?.tags) && data.tags.length) {
+      const keys = data.tags.slice(0, 3).join(' · ');
+      if (keys) out.push(`${keys} — 한 경기 요약`);
+    }
+
+    if (typeof data?.content === 'string' && data.content.trim()) {
+      const firstSentence = data.content.split(/[.!?]\s|[\n]/).find(Boolean);
+      if (firstSentence && firstSentence.length > 8) out.push(firstSentence);
+    }
+
+    if (out.length === 0 && fallbackTopic) out.push(fallbackTopic);
+    return Array.from(new Set(out)).slice(0, 5);
+  };
+
+  const generateReport = async (topicForReport, attempt = 0) => {
+    if (!topicForReport) topicForReport = '스포츠 기사 작성';
+    if (hasGeneratedRef.current && attempt === 0) return;
+    hasGeneratedRef.current = true;
+
+    setIsPageLoading(true);
+    setErrorMsg('');
+
+    try {
+      const formData = new FormData();
+      formData.append('topic', topicForReport);
+
+      if (base64 && fileName) {
+        if (base64.startsWith('data:')) {
+          const byteString = atob(base64.split(',')[1]);
+          const mimeString = base64.split(',')[0].split(':')[1].split(';')[0];
+          const ab = new ArrayBuffer(byteString.length);
+          const ia = new Uint8Array(ab);
+          for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
+          formData.append('file', new Blob([ab], { type: mimeString }), fileName);
+        } else {
+          formData.append('file', new Blob([base64], { type: 'text/csv' }), fileName);
+        }
+      }
+
+      const res = await fetch(CONFIG.REPORT_ENDPOINT, { method: 'POST', body: formData });
+      if (!res.ok) throw new Error(`서버 오류: ${res.status}`);
+
+      const data = await res.json();
+
+      let nextTitle = (data.title || '').trim();
+      if (!nextTitle && CONFIG.USE_CAPTION_AS_TITLE_FALLBACK) {
+        const caps = data.captions || {};
+        const capCandidates = [
+          caps.headline,
+          caps.summary,
+          ...(typeof caps === 'object' ? Object.values(caps) : []),
+        ].filter((v) => typeof v === 'string' && v.trim());
+        if (capCandidates.length) nextTitle = capCandidates[0].trim();
+      }
+      if (!nextTitle) nextTitle = topicForReport;
+
+      const nextContent = data.content || '';
+
+      setReportTitle(nextTitle);
+      setReportContent(nextContent);
+
+      localStorage.setItem('edit_subject', nextTitle);
+      localStorage.setItem('edit_content', nextContent);
+
+      if (Array.isArray(data.tags)) {
+        setReportTags(data.tags);
+        localStorage.setItem('edit_tags', JSON.stringify(data.tags));
+      } else {
+        setReportTags([]);
+        localStorage.removeItem('edit_tags');
+      }
+
+      if (data.captions && typeof data.captions === 'object') {
+        setReportCaptions(data.captions);
+        localStorage.setItem('edit_captions', JSON.stringify(data.captions));
+      } else {
+        setReportCaptions({});
+        localStorage.removeItem('edit_captions');
+      }
+
+      const suggestions = buildSuggestedTitles(data, nextTitle);
+      setRecommendedTitles(suggestions);
+    } catch (err) {
+      console.error('보고서 생성 실패:', err);
+      setErrorMsg('보고서 생성에 실패했습니다. 네트워크 또는 서버 상태를 확인하세요.');
+
+      if (attempt < CONFIG.MAX_RETRIES) {
+        hasGeneratedRef.current = false;
+        return generateReport(topicForReport, attempt + 1);
+      } else {
+        hasGeneratedRef.current = false;
+      }
+    } finally {
+      setIsPageLoading(false);
+    }
+  };
+
   useEffect(() => {
-    // 기본 설정
-    if (topic) setReportTitle(topic);
-
-    const savedContent = localStorage.getItem('edit_content');
-    if (savedContent) setReportContent(savedContent);
-
     setToday(
       new Date().toLocaleDateString('en-US', {
         year: 'numeric',
@@ -48,90 +177,21 @@ const Edit3 = () => {
       })
     );
 
-    // 새 주제 시작 시, 이전 이미지 관련 잔존값 제거
-    if (topic) {
-      [
-        'edit_image',
-        'edit_image_position',
-        'edit_image_width',
-        'edit_image_align',
-        'edit_image_marginTop',
-        'edit_image_marginLeft',
-      ].forEach((k) => localStorage.removeItem(k));
-    }
+    if (reset) clearAllLocalForEdit();
 
-    if (!topic || hasGeneratedRef.current) return;
+    const baseTopic = (initialTopic || '').trim();
+    setReportTitle(baseTopic);
 
-    hasGeneratedRef.current = true;
+    [
+      'edit_image',
+      'edit_image_position',
+      'edit_image_width',
+      'edit_image_align',
+      'edit_image_marginTop',
+      'edit_image_marginLeft',
+    ].forEach((k) => localStorage.removeItem(k));
 
-    const generateReport = async () => {
-      try {
-        const formData = new FormData();
-        formData.append('topic', topic);
-
-        if (base64 && fileName) {
-          if (base64.startsWith('data:')) {
-            const byteString = atob(base64.split(',')[1]);
-            const mimeString = base64.split(',')[0].split(':')[1].split(';')[0];
-            const ab = new ArrayBuffer(byteString.length);
-            const ia = new Uint8Array(ab);
-            for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
-            formData.append('file', new Blob([ab], { type: mimeString }), fileName);
-          } else {
-            formData.append('file', new Blob([base64], { type: 'text/csv' }), fileName);
-          }
-        }
-
-        console.log('보고서 생성 API 호출 시작:', topic);
-
-        // ✅ 프록시 없이 절대 URL 사용
-        const response = await fetch('https://api.jolpai-backend.shop/api/generate-report', {
-          method: 'POST',
-          body: formData,
-          // mode: 'cors', // 기본이 cors라 생략 가능
-        });
-
-        if (!response.ok) {
-          throw new Error(`서버 오류: ${response.status}`);
-        }
-
-        const data = await response.json();
-
-        console.log('📦 API 응답 전체 데이터:', data);
-        console.log('🏷️ API 응답 태그 필드:', data.tags);
-        console.log('💬 API 응답 캡션 필드:', data.captions);
-
-        // 제목/내용 반영 + 즉시 저장 (Result가 바로 읽도록)
-        const nextTitle = data.title || topic || '';
-        const nextContent = data.content || '';
-
-        setReportTitle(nextTitle);
-        setReportContent(nextContent);
-
-        localStorage.setItem('edit_subject', nextTitle);
-        localStorage.setItem('edit_content', nextContent);
-
-        // 태그 저장
-        if (Array.isArray(data.tags)) {
-          setReportTags(data.tags);
-          localStorage.setItem('edit_tags', JSON.stringify(data.tags));
-        }
-
-        // 캡션 저장
-        if (data.captions && typeof data.captions === 'object') {
-          setReportCaptions(data.captions);
-          localStorage.setItem('edit_captions', JSON.stringify(data.captions));
-        }
-
-        // 🔕 자동 새로고침 제거: 화면 상태만 갱신
-      } catch (error) {
-        console.error('보고서 생성 실패:', error);
-        // 실패 시 재시도 허용
-        hasGeneratedRef.current = false;
-      }
-    };
-
-    generateReport();
+    generateReport(baseTopic);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -145,18 +205,63 @@ const Edit3 = () => {
     reader.readAsDataURL(file);
   };
 
+  const applySelectedTitle = async (title) => {
+    setSelectedTitle(title);
+    setReportTitle(title);
+    localStorage.setItem('edit_subject', title);
+
+    if (CONFIG.REGENERATE_ON_TITLE_SELECT) {
+      hasGeneratedRef.current = false;
+      localStorage.removeItem('edit_content');
+      localStorage.removeItem('edit_tags');
+      localStorage.removeItem('edit_captions');
+      await generateReport(title);
+    }
+  };
+
+  // 🔹 타이핑으로 제목 직접 수정 가능
+  const onChangeTitle = (e) => {
+    const v = e.target.value;
+    setReportTitle(v);
+    localStorage.setItem('edit_subject', v);
+  };
+  const onKeyDownTitle = (e) => {
+    if (e.key === 'Enter') e.currentTarget.blur();
+  };
+
   return (
     <div className="editor-container" style={{ paddingRight: sidebarWidth + 20 }}>
+      {/* 전체 로딩 오버레이 */}
+      {isPageLoading && (
+        <div className="loading-overlay">
+          <div className="loading-box">
+            <div className="spinner" />
+            <div className="loading-text">기사를 생성하는 중입니다…</div>
+          </div>
+        </div>
+      )}
+
+      {/* 오류 안내 */}
+      {!isPageLoading && errorMsg && (
+        <div className="loading-overlay" style={{ background: 'rgba(255,255,255,.6)' }}>
+          <div className="loading-box">
+            <div className="loading-text" style={{ marginBottom: 8 }}>{errorMsg}</div>
+            <button
+              className="btn"
+              onClick={() => generateReport(reportTitle || initialTopic || '스포츠 기사 작성')}
+            >
+              다시 시도
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* 유저 정보 */}
       <div className="user-info" style={{ paddingRight: sidebarWidth + 50 }}>
         <div className="row">
           <div className="col">작성자</div>
-          <div className="col" style={{ textAlign: 'center' }}>
-            부서
-          </div>
-          <div className="col" style={{ textAlign: 'right' }}>
-            작성날짜
-          </div>
+          <div className="col" style={{ textAlign: 'center' }}>부서</div>
+          <div className="col" style={{ textAlign: 'right' }}>작성날짜</div>
         </div>
         <div className="row">
           <div className="col value">
@@ -171,24 +276,48 @@ const Edit3 = () => {
         </div>
       </div>
 
+      {/* 제목 추천 (응답 기반) */}
+      {CONFIG.SHOW_RECOMMENDATIONS && (
+        <div className="title-recommendations" style={{ width: `calc(100% - ${sidebarWidth}px)` }}>
+          <h3 style={{ marginTop: 8, marginBottom: 8 }}>제목 추천</h3>
+          {recommendedTitles.length === 0 && (
+            <div className="title-empty">추천 제목이 없습니다.</div>
+          )}
+          {recommendedTitles.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {recommendedTitles.map((t, idx) => (
+                <button
+                  key={idx}
+                  className={`title-item ${selectedTitle === t ? 'selected' : ''}`}
+                  onClick={() => applySelectedTitle(t)}
+                  title={t}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* 메인 콘텐츠 */}
       <div className="main-content" style={{ width: `calc(100% - ${sidebarWidth}px)` }}>
+        {/* 🔹 제목 입력 가능 */}
+        <input
+          className="report-title-input"
+          value={reportTitle}
+          onChange={onChangeTitle}
+          onKeyDown={onKeyDownTitle}
+          placeholder="기사 제목을 입력하세요"
+        />
+
+        {/* 이미지 컨트롤 */}
         {imageUrl && (
           <div className="image-controls">
-            <button className="btn" onClick={() => setImagePosition('top')}>
-              위로
-            </button>
-            <button className="btn" onClick={() => setImagePosition('bottom')}>
-              아래로
-            </button>
+            <button className="btn" onClick={() => setImagePosition('top')}>위로</button>
+            <button className="btn" onClick={() => setImagePosition('bottom')}>아래로</button>
             <label>크기:</label>
-            <input
-              type="range"
-              min="10"
-              max="100"
-              value={imageWidth}
-              onChange={(e) => setImageWidth(Number(e.target.value))}
-            />
+            <input type="range" min="10" max="100" value={imageWidth} onChange={(e) => setImageWidth(Number(e.target.value))} />
             <span>{imageWidth}%</span>
             <label style={{ marginLeft: 16 }}>정렬:</label>
             <select value={imageAlign} onChange={(e) => setImageAlign(e.target.value)}>
@@ -197,36 +326,13 @@ const Edit3 = () => {
               <option value="right">오른쪽</option>
             </select>
             <label style={{ marginLeft: 16 }}>여백TOP(px):</label>
-            <input
-              type="number"
-              value={imageMarginTop}
-              onChange={(e) => setImageMarginTop(Number(e.target.value))}
-              style={{ width: 60 }}
-            />
+            <input type="number" value={imageMarginTop} onChange={(e) => setImageMarginTop(Number(e.target.value))} style={{ width: 60 }} />
             <label style={{ marginLeft: 8 }}>LEFT(px):</label>
-            <input
-              type="number"
-              value={imageMarginLeft}
-              onChange={(e) => setImageMarginLeft(Number(e.target.value))}
-              style={{ width: 60 }}
-            />
+            <input type="number" value={imageMarginLeft} onChange={(e) => setImageMarginLeft(Number(e.target.value))} style={{ width: 60 }} />
           </div>
         )}
 
-        {imageUrl && imagePosition === 'top' && (
-          <div
-            className="image-wrapper"
-            style={{
-              textAlign: imageAlign,
-              marginTop: imageMarginTop,
-              marginLeft: imageMarginLeft,
-            }}
-          >
-            <img src={imageUrl} alt="첨부" style={{ width: `${imageWidth}%` }} />
-          </div>
-        )}
-
-        <h2 className="report-title">{reportTitle}</h2>
+        {/* 본문 */}
         <textarea
           className="report-textarea"
           rows={10}
@@ -235,14 +341,11 @@ const Edit3 = () => {
           placeholder="내용을 입력하세요"
         />
 
-        {imageUrl && imagePosition === 'bottom' && (
+        {/* 이미지 프리뷰 */}
+        {imageUrl && ['top','bottom'].includes(imagePosition) && (
           <div
             className="image-wrapper"
-            style={{
-              textAlign: imageAlign,
-              marginTop: imageMarginTop,
-              marginLeft: imageMarginLeft,
-            }}
+            style={{ textAlign: imageAlign, marginTop: imageMarginTop, marginLeft: imageMarginLeft }}
           >
             <img src={imageUrl} alt="첨부" style={{ width: `${imageWidth}%` }} />
           </div>
@@ -252,24 +355,12 @@ const Edit3 = () => {
       {/* 사이드바 */}
       <aside className="sidebar" style={{ width: sidebarWidth }}>
         <h3>이미지 추가하기</h3>
-        <input
-          id="file-upload"
-          type="file"
-          accept="image/*"
-          style={{ display: 'none' }}
-          onChange={handleImageUpload}
-        />
-        <label htmlFor="file-upload" className="file-button">
-          파일 선택
-        </label>
+        <input id="file-upload" type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImageUpload} />
+        <label htmlFor="file-upload" className="file-button">파일 선택</label>
       </aside>
 
       {/* 토글 버튼 */}
-      <div
-        className="sidebar-toggle"
-        style={{ right: sidebarWidth + 42 }}
-        onClick={toggleSidebar}
-      >
+      <div className="sidebar-toggle" style={{ right: sidebarWidth + 42 }} onClick={toggleSidebar}>
         {isSidebarOpen ? '>' : '<'}
       </div>
 
@@ -278,12 +369,10 @@ const Edit3 = () => {
         <button
           className="btn"
           onClick={() => {
-            // 최종 확정값 저장
             localStorage.setItem('edit_content', reportContent);
             localStorage.setItem('edit_subject', reportTitle);
             localStorage.setItem('edit_tags', JSON.stringify(reportTags));
             localStorage.setItem('edit_captions', JSON.stringify(reportCaptions));
-
             if (imageUrl) {
               localStorage.setItem('edit_image', imageUrl);
               localStorage.setItem('edit_image_position', imagePosition);

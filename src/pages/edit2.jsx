@@ -10,9 +10,6 @@ const Edit2 = () => {
 
   const [customTitle, setCustomTitle] = useState('');
   const [today, setToday] = useState('');
-  const [recommendedTitles, setRecommendedTitles] = useState([]); // API 결과
-  const [selectedTitle, setSelectedTitle] = useState('');
-  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     // localStorage 요청사항 불러오기
@@ -28,39 +25,6 @@ const Edit2 = () => {
         day: 'numeric',
       })
     );
-
-    // 🔥 API 호출해서 추천 제목 가져오기
-    const fetchTitles = async () => {
-      try {
-        setLoading(true);
-        const res = await fetch('/api/generate-report', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            user_request: storedSubject || '스포츠 기사 작성',
-          }),
-        });
-
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-
-        // 백엔드 스키마: title: List[str]
-        const titles = Array.isArray(data.title ?? data.titles) ? (data.title ?? data.titles) : [];
-        setRecommendedTitles(titles);
-      } catch (err) {
-        console.error('제목 불러오기 실패:', err);
-        // fallback 예시
-        setRecommendedTitles([
-          '두산, 9회말 짜릿한 끝내기! MVP는 정수빈',
-          'LG, 에이스 투수 활약으로 리그 선두 수성',
-          'SSG 타선 폭발! 키움 상대 10-1 대승',
-        ]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchTitles();
   }, []);
 
   const handleStart = () => {
@@ -69,17 +33,12 @@ const Edit2 = () => {
 
     navigate('/edit3', {
       state: {
-        topic: (selectedTitle || customTitle || '').trim(),
+        topic: (customTitle || '').trim(), // Edit3에서 추천제목 다시 받음
         base64,
         fileName,
+        reset: true, // Edit3가 페이지/스토리지 리셋하도록 신호
       },
     });
-  };
-
-  const handleSelectTitle = (title) => {
-    setSelectedTitle(title);
-    // 선택 시 입력창에도 반영하고 싶다면 아래 주석 해제
-    // setCustomTitle(title);
   };
 
   return (
@@ -94,7 +53,7 @@ const Edit2 = () => {
       <div className="edit-userinfo">
         <div className="edit-userinfo-inner">
           <div className="edit-avatar" />
-
+          {/* 필요하다면 사용자명/부서 추가 */}
         </div>
       </div>
 
@@ -106,7 +65,7 @@ const Edit2 = () => {
           <input
             value={customTitle}
             onChange={(e) => setCustomTitle(e.target.value)}
-            placeholder="기사 제목을 직접 입력하거나 추천 제목을 클릭해 주세요."
+            placeholder="기사 제목을 직접 입력하세요. (추천제목은 다음 단계에서 받아요)"
           />
         </div>
 
@@ -114,27 +73,6 @@ const Edit2 = () => {
         <div className="form-group">
           <label>기사 작성 날짜</label>
           <div className="readonly-input">{today}</div>
-        </div>
-
-        {/* 제목 추천 */}
-        <div className="form-group">
-          <label>제목 추천</label>
-          <div className="title-recommendations">
-            {loading && <div className="title-loading">제목 생성 중…</div>}
-            {!loading && recommendedTitles.map((title, idx) => (
-              <div
-                key={idx}
-                className={`title-item ${selectedTitle === title ? 'selected' : ''}`}
-                onClick={() => handleSelectTitle(title)}
-                title={title}
-              >
-                {title}
-              </div>
-            ))}
-            {!loading && recommendedTitles.length === 0 && (
-              <div className="title-empty">추천 제목이 없습니다.</div>
-            )}
-          </div>
         </div>
 
         {/* 버튼 */}
