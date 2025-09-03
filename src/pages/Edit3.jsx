@@ -9,12 +9,18 @@ import '../styles/Edit3.css';
    ========================================================= */
 const CONFIG = {
   REPORT_ENDPOINT: 'https://api.jolpai-backend.shop/api/generate-report',
-  SHOW_RECOMMENDATIONS: true,
   USE_CAPTION_AS_TITLE_FALLBACK: true,
-  REGENERATE_ON_TITLE_SELECT: false,
+  REGENERATE_ON_TITLE_SELECT: false, // 타이틀 클릭 시 본문 재생성까지 할지
   MAX_RETRIES: 1,
 };
 /* ======================================================= */
+
+/** 모델 응답에 섞일 수 있는 특수 마커(<|...|>) 및 라벨 정리 */
+const stripChatMarkers = (val) => {
+  if (typeof val !== 'string') return val;
+  const noMarkers = val.replace(/<\|[^|>]+?\|>/g, '');
+  return noMarkers.replace(/^\s*(assistant:|user:)\s*/gi, '').trim();
+};
 
 const Edit3 = () => {
   const navigate = useNavigate();
@@ -31,14 +37,17 @@ const Edit3 = () => {
   const [reportCaptions, setReportCaptions] = useState({});
   const [today, setToday] = useState('');
 
-  const [recommendedTitles, setRecommendedTitles] = useState([]);
+  // 응답으로 받은 title 전체(3개) 표시/선택
+  const [allTitles, setAllTitles] = useState([]);
   const [selectedTitle, setSelectedTitle] = useState('');
 
   const hasGeneratedRef = useRef(false);
 
+  // ✅ 사이드바: 0 ↔ 300px 토글
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const sidebarWidth = isSidebarOpen ? 600 : 300;
+  const sidebarWidth = isSidebarOpen ? 300 : 0;
 
+  // 이미지 설정
   const [imageUrl, setImageUrl] = useState(null);
   const [imagePosition, setImagePosition] = useState('top');
   const [imageWidth, setImageWidth] = useState(100);
@@ -59,30 +68,6 @@ const Edit3 = () => {
       'edit_image_marginTop',
       'edit_image_marginLeft',
     ].forEach((k) => localStorage.removeItem(k));
-  };
-
-  const buildSuggestedTitles = (data, fallbackTopic) => {
-    const out = [];
-    if (Array.isArray(data?.titles) && data.titles.length) return data.titles;
-
-    const caps = data?.captions || {};
-    if (typeof caps === 'object') {
-      if (caps.headline && typeof caps.headline === 'string') out.push(caps.headline);
-      if (caps.summary && typeof caps.summary === 'string') out.push(caps.summary);
-    }
-
-    if (Array.isArray(data?.tags) && data.tags.length) {
-      const keys = data.tags.slice(0, 3).join(' · ');
-      if (keys) out.push(`${keys} — 한 경기 요약`);
-    }
-
-    if (typeof data?.content === 'string' && data.content.trim()) {
-      const firstSentence = data.content.split(/[.!?]\s|[\n]/).find(Boolean);
-      if (firstSentence && firstSentence.length > 8) out.push(firstSentence);
-    }
-
-    if (out.length === 0 && fallbackTopic) out.push(fallbackTopic);
-    return Array.from(new Set(out)).slice(0, 5);
   };
 
   const generateReport = async (topicForReport, attempt = 0) => {
@@ -113,46 +98,63 @@ const Edit3 = () => {
       const res = await fetch(CONFIG.REPORT_ENDPOINT, { method: 'POST', body: formData });
       if (!res.ok) throw new Error(`서버 오류: ${res.status}`);
 
-      const data = await res.json();
+      const raw = await res.json();
 
-      let nextTitle = (data.title || '').trim();
+      // 🔹 title 배열/문자열 대응 + 마커 제거
+      const incomingTitles = Array.isArray(raw.title)
+        ? raw.title
+        : (typeof raw.title === 'string' && raw.title.trim() ? [raw.title] : []);
+
+      // 줄바꿈으로 3개가 올 수도 있으니 확장
+      const expanded =
+        incomingTitles.length === 1 && incomingTitles[0].includes('\n')
+          ? incomingTitles[0].split('\n').map(s => s.trim()).filter(Boolean)
+          : incomingTitles;
+
+      const cleanTitles = expanded
+        .map(t => stripChatMarkers(t || ''))
+        .map(t => t.replace(/^[-•\s]+/, '')) // 앞 기호 제거 안전망
+        .filter(Boolean);
+
+      setAllTitles(cleanTitles);
+
+      // 기본 적용할 제목: 1) 배열 첫 번째 → 2) 캡션 → 3) 토픽
+      let nextTitle = cleanTitles[0] || '';
       if (!nextTitle && CONFIG.USE_CAPTION_AS_TITLE_FALLBACK) {
-        const caps = data.captions || {};
-        const capCandidates = [
-          caps.headline,
-          caps.summary,
-          ...(typeof caps === 'object' ? Object.values(caps) : []),
-        ].filter((v) => typeof v === 'string' && v.trim());
-        if (capCandidates.length) nextTitle = capCandidates[0].trim();
+        const caps = raw.captions && typeof raw.captions === 'object' ? raw.captions : {};
+        const capCandidates = Object.values(caps)
+          .filter(v => typeof v === 'string' && v.trim())
+          .map(v => stripChatMarkers(v));
+        if (capCandidates.length) nextTitle = capCandidates[0];
       }
       if (!nextTitle) nextTitle = topicForReport;
 
-      const nextContent = data.content || '';
+      // 본문/태그/캡션 sanitize
+      const nextContent = stripChatMarkers(raw.content || '');
+      const nextTags = Array.isArray(raw.tags)
+        ? raw.tags.map(t => stripChatMarkers(String(t)))
+        : [];
+      const nextCaptions = (raw.captions && typeof raw.captions === 'object')
+        ? Object.fromEntries(
+            Object.entries(raw.captions).map(([k, v]) => [k, stripChatMarkers(String(v || ''))])
+          )
+        : {};
 
       setReportTitle(nextTitle);
       setReportContent(nextContent);
+      setReportTags(nextTags);
+      setReportCaptions(nextCaptions);
 
+      // localStorage 저장
       localStorage.setItem('edit_subject', nextTitle);
       localStorage.setItem('edit_content', nextContent);
+      nextTags.length
+        ? localStorage.setItem('edit_tags', JSON.stringify(nextTags))
+        : localStorage.removeItem('edit_tags');
+      Object.keys(nextCaptions).length
+        ? localStorage.setItem('edit_captions', JSON.stringify(nextCaptions))
+        : localStorage.removeItem('edit_captions');
 
-      if (Array.isArray(data.tags)) {
-        setReportTags(data.tags);
-        localStorage.setItem('edit_tags', JSON.stringify(data.tags));
-      } else {
-        setReportTags([]);
-        localStorage.removeItem('edit_tags');
-      }
-
-      if (data.captions && typeof data.captions === 'object') {
-        setReportCaptions(data.captions);
-        localStorage.setItem('edit_captions', JSON.stringify(data.captions));
-      } else {
-        setReportCaptions({});
-        localStorage.removeItem('edit_captions');
-      }
-
-      const suggestions = buildSuggestedTitles(data, nextTitle);
-      setRecommendedTitles(suggestions);
     } catch (err) {
       console.error('보고서 생성 실패:', err);
       setErrorMsg('보고서 생성에 실패했습니다. 네트워크 또는 서버 상태를 확인하세요.');
@@ -182,6 +184,7 @@ const Edit3 = () => {
     const baseTopic = (initialTopic || '').trim();
     setReportTitle(baseTopic);
 
+    // 이미지 관련 로컬값 초기화
     [
       'edit_image',
       'edit_image_position',
@@ -219,7 +222,6 @@ const Edit3 = () => {
     }
   };
 
-  // 🔹 타이핑으로 제목 직접 수정 가능
   const onChangeTitle = (e) => {
     const v = e.target.value;
     setReportTitle(v);
@@ -230,7 +232,8 @@ const Edit3 = () => {
   };
 
   return (
-    <div className="editor-container" style={{ paddingRight: sidebarWidth + 20 }}>
+    // ✅ 컨테이너에 CSS 변수로 사이드바 너비 전달 (네 CSS와 연동)
+    <div className="editor-container" style={{ '--sidebar-w': `${sidebarWidth}px` }}>
       {/* 전체 로딩 오버레이 */}
       {isPageLoading && (
         <div className="loading-overlay">
@@ -257,7 +260,7 @@ const Edit3 = () => {
       )}
 
       {/* 유저 정보 */}
-      <div className="user-info" style={{ paddingRight: sidebarWidth + 50 }}>
+      <div className="user-info">
         <div className="row">
           <div className="col">작성자</div>
           <div className="col" style={{ textAlign: 'center' }}>부서</div>
@@ -276,32 +279,27 @@ const Edit3 = () => {
         </div>
       </div>
 
-      {/* 제목 추천 (응답 기반) */}
-      {CONFIG.SHOW_RECOMMENDATIONS && (
-        <div className="title-recommendations" style={{ width: `calc(100% - ${sidebarWidth}px)` }}>
-          <h3 style={{ marginTop: 8, marginBottom: 8 }}>제목 추천</h3>
-          {recommendedTitles.length === 0 && (
-            <div className="title-empty">추천 제목이 없습니다.</div>
-          )}
-          {recommendedTitles.length > 0 && (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-              {recommendedTitles.map((t, idx) => (
-                <button
-                  key={idx}
-                  className={`title-item ${selectedTitle === t ? 'selected' : ''}`}
-                  onClick={() => applySelectedTitle(t)}
-                  title={t}
-                >
-                  {t}
-                </button>
-              ))}
-            </div>
-          )}
+      {/* ===== 제목 추천 영역 (응답 title 3개, 기존 CSS 그대로 사용) ===== */}
+      {allTitles.length > 0 && (
+        <div className="title-recommendations">
+          <h3>제목 추천</h3>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {allTitles.map((t, idx) => (
+              <button
+                key={`${idx}-${t}`}
+                className={`title-item ${selectedTitle === t ? 'selected' : ''}`}
+                onClick={() => applySelectedTitle(t)}
+                title={t}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
       {/* 메인 콘텐츠 */}
-      <div className="main-content" style={{ width: `calc(100% - ${sidebarWidth}px)` }}>
+      <div className="main-content">
         {/* 🔹 제목 입력 가능 */}
         <input
           className="report-title-input"
@@ -317,7 +315,13 @@ const Edit3 = () => {
             <button className="btn" onClick={() => setImagePosition('top')}>위로</button>
             <button className="btn" onClick={() => setImagePosition('bottom')}>아래로</button>
             <label>크기:</label>
-            <input type="range" min="10" max="100" value={imageWidth} onChange={(e) => setImageWidth(Number(e.target.value))} />
+            <input
+              type="range"
+              min="10"
+              max="100"
+              value={imageWidth}
+              onChange={(e) => setImageWidth(Number(e.target.value))}
+            />
             <span>{imageWidth}%</span>
             <label style={{ marginLeft: 16 }}>정렬:</label>
             <select value={imageAlign} onChange={(e) => setImageAlign(e.target.value)}>
@@ -326,9 +330,19 @@ const Edit3 = () => {
               <option value="right">오른쪽</option>
             </select>
             <label style={{ marginLeft: 16 }}>여백TOP(px):</label>
-            <input type="number" value={imageMarginTop} onChange={(e) => setImageMarginTop(Number(e.target.value))} style={{ width: 60 }} />
+            <input
+              type="number"
+              value={imageMarginTop}
+              onChange={(e) => setImageMarginTop(Number(e.target.value))}
+              style={{ width: 60 }}
+            />
             <label style={{ marginLeft: 8 }}>LEFT(px):</label>
-            <input type="number" value={imageMarginLeft} onChange={(e) => setImageMarginLeft(Number(e.target.value))} style={{ width: 60 }} />
+            <input
+              type="number"
+              value={imageMarginLeft}
+              onChange={(e) => setImageMarginLeft(Number(e.target.value))}
+              style={{ width: 60 }}
+            />
           </div>
         )}
 
@@ -350,42 +364,55 @@ const Edit3 = () => {
             <img src={imageUrl} alt="첨부" style={{ width: `${imageWidth}%` }} />
           </div>
         )}
+
+        {/* ✅ 완료하기 버튼 — 본문 '밑'에 배치 (CSS 수정 없이 인라인으로 고정 해제) */}
+        <div
+          className="bottom-buttons"
+
+        >
+          <button
+            className="btn"
+            onClick={() => {
+              localStorage.setItem('edit_content', reportContent);
+              localStorage.setItem('edit_subject', reportTitle);
+              localStorage.setItem('edit_tags', JSON.stringify(reportTags));
+              localStorage.setItem('edit_captions', JSON.stringify(reportCaptions));
+              if (imageUrl) {
+                localStorage.setItem('edit_image', imageUrl);
+                localStorage.setItem('edit_image_position', imagePosition);
+                localStorage.setItem('edit_image_width', imageWidth.toString());
+                localStorage.setItem('edit_image_align', imageAlign);
+                localStorage.setItem('edit_image_marginTop', imageMarginTop.toString());
+                localStorage.setItem('edit_image_marginLeft', imageMarginLeft.toString());
+              }
+              navigate('/Result');
+            }}
+          >
+            완료하기
+          </button>
+        </div>
       </div>
 
       {/* 사이드바 */}
       <aside className="sidebar" style={{ width: sidebarWidth }}>
-        <h3>이미지 추가하기</h3>
-        <input id="file-upload" type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImageUpload} />
+        <h3 className="sidebar-title">이미지 추가하기</h3>
+        <input
+          id="file-upload"
+          type="file"
+          accept="image/*"
+          style={{ display: 'none' }}
+          onChange={handleImageUpload}
+        />
         <label htmlFor="file-upload" className="file-button">파일 선택</label>
       </aside>
 
       {/* 토글 버튼 */}
-      <div className="sidebar-toggle" style={{ right: sidebarWidth + 42 }} onClick={toggleSidebar}>
+      <div
+        className="sidebar-toggle"
+        style={{ right: `calc(var(--sidebar-w, 0px) + 0px)` }}
+        onClick={toggleSidebar}
+      >
         {isSidebarOpen ? '>' : '<'}
-      </div>
-
-      {/* 하단 버튼 */}
-      <div className="bottom-buttons" style={{ right: sidebarWidth + 70 }}>
-        <button
-          className="btn"
-          onClick={() => {
-            localStorage.setItem('edit_content', reportContent);
-            localStorage.setItem('edit_subject', reportTitle);
-            localStorage.setItem('edit_tags', JSON.stringify(reportTags));
-            localStorage.setItem('edit_captions', JSON.stringify(reportCaptions));
-            if (imageUrl) {
-              localStorage.setItem('edit_image', imageUrl);
-              localStorage.setItem('edit_image_position', imagePosition);
-              localStorage.setItem('edit_image_width', imageWidth.toString());
-              localStorage.setItem('edit_image_align', imageAlign);
-              localStorage.setItem('edit_image_marginTop', imageMarginTop.toString());
-              localStorage.setItem('edit_image_marginLeft', imageMarginLeft.toString());
-            }
-            navigate('/Result');
-          }}
-        >
-          완료하기
-        </button>
       </div>
     </div>
   );
