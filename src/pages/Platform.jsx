@@ -53,7 +53,7 @@ export default function Platform() {
       awayLogo: '/SAMSUNG.png',
       stadium: '대구',
       league: 'KBO',
-      scheduledAt: todayWithTime('15:00')
+      
     },
     {
       status: '18:30 예정',
