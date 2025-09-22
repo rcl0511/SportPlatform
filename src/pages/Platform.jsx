@@ -35,19 +35,19 @@ export default function Platform() {
   }
 
   const matchList = [
-    { status: 'LIVE', date: today, homeTeam: 'LG',   homeScore: 3, awayTeam: 'KIA',   awayScore: 2, homeLogo: '/LG.png',      awayLogo: '/KIA.png',      stadium: '잠실',  league: 'KBO' },
-    { status: '18:30 예정', date: today, homeTeam: 'KT',   homeScore: 0, awayTeam: 'NC',    awayScore: 0, homeLogo: '/KT.png',      awayLogo: '/NC.png',       stadium: '수원',  league: 'KBO', scheduledAt: todayWithTime('15:00') },
-    { status: '18:30 예정', date: today, homeTeam: 'SSG',  homeScore: 0, awayTeam: '두산',  awayScore: 0, homeLogo: '/SSG.png',     awayLogo: '/DOOSAN.png',   stadium: '문학',  league: 'KBO', scheduledAt: todayWithTime('18:00') },
-    { status: '18:30 예정', date: today, homeTeam: '삼성', homeScore: 0, awayTeam: '한화',  awayScore: 0, homeLogo: '/SAMSUNG.png',  awayLogo: '/HANWHA.png',   stadium: '대구',  league: 'KBO', scheduledAt: todayWithTime('18:00') },
-    { status: '18:30 예정', date: today, homeTeam: '키움', homeScore: 0, awayTeam: '롯데',  awayScore: 0, homeLogo: '/KIWOOM.png',   awayLogo: '/LOTTE.png',    stadium: '고척',  league: 'KBO', scheduledAt: todayWithTime('18:00') },
+    { status: 'LIVE', date: today, homeTeam: 'LG', homeScore: 3, awayTeam: 'KIA', awayScore: 2, homeLogo: '/LG.png', awayLogo: '/KIA.png', stadium: '잠실', league: 'KBO' },
+    { status: '18:30 예정', date: today, homeTeam: '두산', homeScore: 0, awayTeam: '삼성', awayScore: 0, homeLogo: '/DOOSAN.png', awayLogo: '/SAMSUNG.png', stadium: '대구', league: 'KBO', scheduledAt: todayWithTime('15:00') },
+    { status: '18:30 예정', date: today, homeTeam: 'NC', homeScore: 0, awayTeam: '롯데', awayScore: 0, homeLogo: '/NC.png', awayLogo: '/LOTTE.png', stadium: '울산', league: 'KBO', scheduledAt: todayWithTime('16:30') },
+    { status: '18:30 예정', date: today, homeTeam: '키움', homeScore: 0, awayTeam: 'KT', awayScore: 0, homeLogo: '/KIWOOM.png', awayLogo: '/KT.png', stadium: '수원', league: 'KBO', scheduledAt: todayWithTime('18:00') },
+    { status: '18:30 예정', date: today, homeTeam: 'KIA', homeScore: 0, awayTeam: 'SSG', awayScore: 0, homeLogo: '/KIApng', awayLogo: '/SSG.png', stadium: '문학', league: 'KBO', scheduledAt: todayWithTime('18:00') },
 
     // 종료된 경기 (어제)
-  { status: '종료', date: yesterday, homeTeam: 'KIA',   homeScore: 2, awayTeam: 'KT',  awayScore: 8, homeLogo: '/KIA.png',     awayLogo: '/KT.png',    stadium: '수원', broadcaster: 'KBS N SPORTS', league: 'KBO' },
-  { status: '종료', date: yesterday, homeTeam: 'NC',    homeScore: 12, awayTeam: 'SSG', awayScore: 2, homeLogo: '/NC.png',      awayLogo: '/SSG.png',   stadium: '문학', broadcaster: 'SPOTV',        league: 'KBO' },
-  { status: '종료', date: yesterday, homeTeam: '두산',  homeScore: 8, awayTeam: '롯데', awayScore: 8, homeLogo: '/DOOSAN.png',  awayLogo: '/LOTTE.png', stadium: '사직', broadcaster: 'SBS SPORTS',   league: 'KBO' },
-  { status: '종료', date: yesterday, homeTeam: '삼성',  homeScore: 4, awayTeam: '한화', awayScore: 0, homeLogo: '/SAMSUNG.png', awayLogo: '/HANWHA.png',stadium: '대전', broadcaster: 'MBC SPORTS+',  league: 'KBO' },
-  { status: '종료', date: yesterday, homeTeam: '키움',  homeScore: 5, awayTeam: 'LG',  awayScore: 6, homeLogo: '/KIWOOM.png',  awayLogo: '/LG.png',    stadium: '잠실', broadcaster: 'SPOTV2',       league: 'KBO' },
-];
+    { status: '종료', date: yesterday, homeTeam: 'NC', homeScore: 7, awayTeam: 'KIA', awayScore: 6, homeLogo: '/NC.png', awayLogo: '/KIA.png', stadium: '광주', broadcaster: 'KBS N SPORTS', league: 'KBO' },
+    { status: '종료', date: yesterday, homeTeam: '삼성', homeScore: 3, awayTeam: 'KT', awayScore: 6, homeLogo: '/SAMSUNG.png', awayLogo: '/KT.png', stadium: '수원', broadcaster: 'SPOTV', league: 'KBO' },
+    { status: '종료', date: yesterday, homeTeam: '두산', homeScore: 3, awayTeam: 'SSG', awayScore: 7, homeLogo: '/DOOSAN.png', awayLogo: '/SSG.png', stadium: '문학', broadcaster: 'SBS SPORTS', league: 'KBO' },
+
+
+  ];
   // 각 매치에 안전한 id 부여
   const matchListWithIds = useMemo(
     () => matchList.map((m, i) => ({ id: m.id ?? `match-${i}`, ...m })),
@@ -57,10 +57,10 @@ export default function Platform() {
 
   const fallbackArticles = [
     { id: 1, title: "‘홈런 쇼’ KBO 올스타전, 올해 MVP는 누구?", reporter: "이정원 기자", views: 15230, image: "/assets/article1.jpg" },
-    { id: 2, title: "역전극의 주인공, 한화의 신예 투수 등장",     reporter: "박지훈 기자", views: 12045, image: "/assets/article2.jpg" },
-    { id: 3, title: "LG, 9회말 끝내기 승리…관중 2만 5천 환호",    reporter: "김수연 기자", views: 11020, image: "/assets/article3.jpg" },
-    { id: 4, title: "NC, KT 꺾고 5연승 질주",                     reporter: "홍길동 기자", views: 9800,  image: "/assets/article4.jpg" },
-    { id: 5, title: "롯데, 3년 만에 포스트시즌 진출 확정",         reporter: "최은지 기자", views: 8700,  image: "/assets/article5.jpg" }
+    { id: 2, title: "역전극의 주인공, 한화의 신예 투수 등장", reporter: "박지훈 기자", views: 12045, image: "/assets/article2.jpg" },
+    { id: 3, title: "LG, 9회말 끝내기 승리…관중 2만 5천 환호", reporter: "김수연 기자", views: 11020, image: "/assets/article3.jpg" },
+    { id: 4, title: "NC, KT 꺾고 5연승 질주", reporter: "홍길동 기자", views: 9800, image: "/assets/article4.jpg" },
+    { id: 5, title: "롯데, 3년 만에 포스트시즌 진출 확정", reporter: "최은지 기자", views: 8700, image: "/assets/article5.jpg" }
   ];
 
   // 초기 로드 & 로딩 스켈레톤
@@ -252,8 +252,8 @@ export default function Platform() {
                               navigate('/editver2', {
                                 state: {
                                   preloadFiles: [
-                                    { url: '/data/리뷰.csv',        name: '리뷰.csv',        type: 'text/csv' },
-                                    { url: '/data/결장.csv',        name: '결장.csv',        type: 'text/csv' },
+                                    { url: '/data/리뷰.csv', name: '리뷰.csv', type: 'text/csv' },
+                                    { url: '/data/결장.csv', name: '결장.csv', type: 'text/csv' },
                                     { url: '/data/경기주요기록.csv', name: '경기주요기록.csv', type: 'text/csv' },
                                   ],
                                   defaultSubject: `[${m.homeTeam} vs ${m.awayTeam}] 경기 기사 작성`
@@ -266,9 +266,12 @@ export default function Platform() {
                         ) : m.status === 'LIVE' ? (
                           <button
                             className="btn btn--live"
-                            onClick={() => navigate(`/live/${m.id}`)}
+                            onClick={() =>
+                              window.location.href =
+                              "https://chzzk.naver.com/live/c7a89dacc428d3e620fe889d6f1fa7c0"
+                            }
                           >
-                            라이브 보기
+                            라이브 보러가기
                           </button>
                         ) : null}
                       </div>
@@ -467,7 +470,7 @@ function SideCard({ title, items = [], emptyText, rightLink, onMore, renderItem 
       <ul
         className={
           title === '이슈 토픽' ? 'topic-list' :
-          title === '오늘의 기록' ? 'record-list' : 'saved-list'
+            title === '오늘의 기록' ? 'record-list' : 'saved-list'
         }
       >
         {items.length ? items.map(renderItem) : <li className="saved-empty">{emptyText}</li>}
