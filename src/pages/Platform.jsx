@@ -96,39 +96,14 @@ export default function Platform() {
     },
 
     // 종료된 경기 (어제)
-    {
-      status: '종료',
-      date: yesterday,
-      homeTeam: 'NC',
-      homeScore: 7,
-      awayTeam: 'KIA',
-      awayScore: 6,
-      homeLogo: '/NC.png',
-      awayLogo: '/KIA.png',
-      stadium: '광주',
-      broadcaster: 'KBS N SPORTS',
-      league: 'KBO'
-    },
-    {
-      status: '종료',
-      date: yesterday,
-      homeTeam: '삼성',
-      homeScore: 3,
-      awayTeam: 'KT',
-      awayScore: 6,
-      homeLogo: '/SAMSUNG.png',
-      awayLogo: '/KT.png',
-      stadium: '수원',
-      broadcaster: 'SPOTV',
-      league: 'KBO'
-    },
+
     {
       status: '종료',
       date: yesterday,
       homeTeam: '두산',
-      homeScore: 3,
+      homeScore: 9,
       awayTeam: 'SSG',
-      awayScore: 7,
+      awayScore: 2,
       homeLogo: '/DOOSAN.png',
       awayLogo: '/SSG.png',
       stadium: '문학',

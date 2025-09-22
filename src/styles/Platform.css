@@ -319,7 +319,7 @@
   line-height: 1.3;
   text-align: center;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+ 
  
   overflow: hidden;
   white-space: normal; /* line-clamp 쓸 땐 normal */
