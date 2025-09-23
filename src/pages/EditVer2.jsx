@@ -1,4 +1,4 @@
-// src/pages/EditVer2.jsx
+        // src/pages/EditVer2.jsx
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Rightbar from '../components/Rightbar';
@@ -362,24 +362,7 @@ const EditVer2 = () => {
         <div className="edit-header">
           <h2>스포츠 기사 작성 시작하기</h2>
 
-          {/* 프리셋 교체 예시 버튼(원하면 노출) */}
-          {/* <div className="edit-actions">
-            <button
-              className="button-white"
-              onClick={() =>
-                replacePreloadedFiles(
-                  [
-                    { url: '/data/%EB%A6%AC%EB%B7%B0.csv', name: '리뷰.csv', type: 'text/csv' },
-                    { url: '/data/%EA%B2%B0%EC%9E%A5.csv', name: '결장.csv', type: 'text/csv' },
-                    { url: '/data/%EA%B2%BD%EA%B8%B0%EC%A3%BC%EC%9A%94%EA%B8%B0%EB%A1%9D.csv', name: '경기주요기록.csv', type: 'text/csv' },
-                  ],
-                  '[LG vs KIA] 새 데이터 세트로 다시 작성'
-                )
-              }
-            >
-              프리셋 교체
-            </button>
-          </div> */}
+          
         </div>
 
         <div className="edit-form">

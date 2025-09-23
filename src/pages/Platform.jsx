@@ -88,7 +88,7 @@ export default function Platform() {
       homeScore: 0,
       awayTeam: 'SSG',
       awayScore: 0,
-      homeLogo: '/KIApng',
+      homeLogo: '/KIA.png',
       awayLogo: '/SSG.png',
       stadium: '문학',
       league: 'KBO',
