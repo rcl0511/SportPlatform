@@ -20,7 +20,7 @@ const Sidebar = () => {
     { icon: <MdEdit />, label: 'Edit', route: '/edit' },
     { icon: <MdInsertDriveFile />, label: 'File', route: '/file' },
     { icon: <MdNotifications />, label: 'Alarm', route: '/alarm' },
-    { icon: <MdSettings />, label: 'Settings', route: '/settings' },
+
     
   ];
 

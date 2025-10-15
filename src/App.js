@@ -12,7 +12,7 @@ import Chat from './pages/Chat';   // 대문자 C
 import Edit3 from './pages/Edit3'; // 대문자 E
 import Result from './pages/Result';
 import File from './pages/File';
-import Settings from './pages/Settings';
+
 import 'react-calendar/dist/Calendar.css';
 import './App.css';
 import Alarm from './pages/Alarm';
@@ -62,7 +62,7 @@ function App() {
             <Route path="edit2" element={<Edit2 />} />
             <Route path="edit3" element={<Edit3 />} />
             <Route path="result" element={<Result />} />
-            <Route path="settings" element={<Settings />} />
+            
             <Route path="/alarm" element={<Alarm />} />
           </Route>
         </Routes>

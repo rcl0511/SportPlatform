@@ -4,7 +4,7 @@ import '../styles/Platform.css';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../contexts/AuthContext';
 
-/* ===== 사용자 이름 헬퍼 (컴포넌트 밖에 선언: 호이스팅 이슈 없음) ===== */
+/* ===== 사용자 이름 헬퍼 (컴포넌트 밖에 선언) ===== */
 const getFullName = (u) => {
   if (!u) return '기자 미상';
   const {
@@ -23,6 +23,29 @@ const getFullName = (u) => {
 
   return name || displayName || username || '기자 미상';
 };
+
+/** saved_files 메타를 article:<id> 의 detail과 병합해서 image/본문을 보강 */
+function mergeArticleDetail(meta) {
+  if (!meta || !meta.id) return meta;
+  try {
+    const raw = localStorage.getItem(`article:${meta.id}`);
+    if (!raw) return meta;
+
+    const detail = JSON.parse(raw || '{}'); // { content, image }
+    // 우선순위: detail.image > meta.image
+    const image = detail?.image || meta?.image || null;
+
+    return { ...meta, image, fullContent: detail?.content ?? meta?.fullContent };
+  } catch {
+    return meta;
+  }
+}
+
+/** 안전 숫자 */
+function safeNum(v) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
 
 export default function Platform() {
   const navigate = useNavigate();
@@ -64,9 +87,8 @@ export default function Platform() {
     {
       status: 'LIVE',
       date: today,
-      league: 'KBO', // 탭 필터 유지용
-      title:
-        '[스포츠N플러스] \n\n 안우진, 1군 엔트리 등록, 왜?'
+      league: 'KBO',
+      title: '[스포츠N플러스] \n\n 안우진, 1군 엔트리 등록, 왜?'
     },
     {
       status: '18:30 예정',
@@ -143,6 +165,7 @@ export default function Platform() {
     []
   );
 
+  // 더미 기사 (있으면 표시되지만, 실제 저장된 기사에 밀림)
   const fallbackArticles = [
     { id: 1, title: '‘홈런 쇼’ KBO 올스타전, 올해 MVP는 누구?', reporter: '이정원 기자', views: 15230, image: '/assets/article1.jpg' },
     { id: 2, title: '역전극의 주인공, 한화의 신예 투수 등장', reporter: '박지훈 기자', views: 12045, image: '/assets/article2.jpg' },
@@ -151,23 +174,37 @@ export default function Platform() {
     { id: 5, title: '롯데, 3년 만에 포스트시즌 진출 확정', reporter: '최은지 기자', views: 8700, image: '/assets/article5.jpg' }
   ];
 
+  /** 업로드 이미지 없을 때도 동일 크기 유지용 */
+  function ImageOrBlank({ src, className, alt, onError }) {
+    if (src) {
+      return <img src={src} alt={alt || ''} className={className} onError={onError} />;
+    }
+    // 동일 크기, 테두리만 있는 빈 박스
+    return <div className={`${className} img-placeholder`} aria-hidden="true" />;
+  }
+
+
+
   // 초기 로드 & 로딩 스켈레톤
   useEffect(() => {
     setLoading(true);
     try {
-      // ⬇️ 저장 기사만 상태에 반영 (더미는 별도로 병합)
+      // 저장 기사 메타 로드
       const stored = JSON.parse(localStorage.getItem('saved_files') || '[]');
-      setSavedArticles(stored);
+
+      // **여기서 detail(article:<id>)을 병합해 image를 끌어온다!**
+      const merged = stored.map(mergeArticleDetail);
+      setSavedArticles(merged);
 
       const storedRecords = JSON.parse(localStorage.getItem('recent_records') || '[]');
       setRecords(
         storedRecords.length
           ? storedRecords
           : [
-              { id: 1, title: 'LG 5-3 KIA (8/14)', detail: '9회말 끝내기 2루타', tag: '경기 요약' },
-              { id: 2, title: '두산 7-2 SSG (8/13)', detail: '선발 7이닝 1실점 QS', tag: '투수 기록' },
-              { id: 3, title: 'NC 3-0 KT (8/12)', detail: '팀 무실점 승리', tag: '클린시트' }
-            ]
+            { id: 1, title: 'LG 5-3 KIA (8/14)', detail: '9회말 끝내기 2루타', tag: '경기 요약' },
+            { id: 2, title: '두산 7-2 SSG (8/13)', detail: '선발 7이닝 1실점 QS', tag: '투수 기록' },
+            { id: 3, title: 'NC 3-0 KT (8/12)', detail: '팀 무실점 승리', tag: '클린시트' }
+          ]
       );
 
       const storedTopics = JSON.parse(localStorage.getItem('hot_topics') || '[]');
@@ -175,10 +212,10 @@ export default function Platform() {
         storedTopics.length
           ? storedTopics
           : [
-              { id: 't1', text: '루키 외야수, 데뷔 첫 홈런으로 팀 승리 견인', heat: 46 },
-              { id: 't2', text: '8월 MVP 레이스, 불펜 에이스 급부상', heat: 21 },
-              { id: 't3', text: '트레이드 마감 임박, 각 팀 보강 시나리오', heat: 33 }
-            ]
+            { id: 't1', text: '루키 외야수, 데뷔 첫 홈런으로 팀 승리 견인', heat: 46 },
+            { id: 't2', text: '8월 MVP 레이스, 불펜 에이스 급부상', heat: 21 },
+            { id: 't3', text: '트레이드 마감 임박, 각 팀 보강 시나리오', heat: 33 }
+          ]
       );
     } catch {
       setSavedArticles([]);
@@ -271,13 +308,11 @@ export default function Platform() {
     (String(s || '').length > n ? String(s).slice(0, n) + '…' : String(s || ''));
   const viewsText = (v) => `${safeNum(v).toLocaleString?.() || safeNum(v)} views`;
 
-  function safeNum(v) {
-    const n = Number(v);
-    return Number.isFinite(n) ? n : 0;
-  }
-
+  // ✅ 이미지 에러 시 감추지 말고 표시(디버깅 도움)
   function imgOnError(e) {
-    e.currentTarget.style.display = 'none';
+    e.currentTarget.style.outline = '2px solid #ff6b6b';
+    e.currentTarget.title = '이미지를 불러오지 못했습니다(경로 확인).';
+    // 원하면 감추기: e.currentTarget.style.display = 'none';
   }
 
   return (
@@ -392,8 +427,8 @@ export default function Platform() {
                           <button
                             className="btn btn--live"
                             onClick={() =>
-                              (window.location.href =
-                                'https://chzzk.naver.com/live/c7a89dacc428d3e620fe889d6f1fa7c0')
+                            (window.location.href =
+                              'https://chzzk.naver.com/live/c7a89dacc428d3e620fe889d6f1fa7c0')
                             }
                           >
                             라이브 보러가기
@@ -459,14 +494,13 @@ export default function Platform() {
                     className="news-main-link"
                   >
                     <article className="news-main">
-                      {sortedArticles[0].image && (
-                        <img
-                          src={sortedArticles[0].image}
-                          alt={sortedArticles[0].title || 'main'}
-                          className="news-main-img"
-                          onError={imgOnError}
-                        />
-                      )}
+                      {/* ✅ 대표 이미지: 병합된 image가 있으면 표시 */}
+                      <ImageOrBlank
+                        src={sortedArticles[0].image}
+                        alt={sortedArticles[0].title || 'main'}
+                        className="news-main-img"
+                        onError={imgOnError}
+                      />
 
                       <div>
                         <h3 className="news-main-title">
@@ -501,14 +535,13 @@ export default function Platform() {
                       className="news-sub-item"
                       key={item.id || item.title}
                     >
-                      {item.image && (
-                        <img
-                          src={item.image}
-                          alt="thumb"
-                          className="news-thumb"
-                          onError={imgOnError}
-                        />
-                      )}
+                      {/* ✅ 서브 썸네일도 병합된 image로 표시 */}
+                      <ImageOrBlank
+  src={item.image}
+  alt="thumb"
+  className="news-thumb"
+  onError={imgOnError}
+/>
                       <div>
                         <div className="news-sub-title">{item.title || '제목 없음'}</div>
                         <div className="news-sub-reporter">{item.reporter || myReporterName}</div>
@@ -524,43 +557,16 @@ export default function Platform() {
 
         <aside className="right-column" aria-label="사이드 정보">
           <div className="right-sticky">
-            {/*
-            <SideCard
-              title="오늘의 기록"
-              items={records.slice(0, 5)}
-              emptyText="오늘 기록이 아직 없어요."
-              onMore={() => alert('기록 더보기 준비 중!')}
-              renderItem={(r) => (
-                <li key={r.id} className="record-item">
-                  <div className="record-title">{r.title}</div>
-                  <div className="record-detail">{r.detail}</div>
-                  <span className="record-tag">{r.tag}</span>
-                </li>
-              )}
-            />
-
-            <SideCard
-              title="이슈 토픽"
-              items={hotTopics.slice(0, 6)}
-              emptyText="이슈 토픽이 아직 없어요."
-              onMore={() => alert('이슈 더보기 준비 중!')}
-              renderItem={(t) => (
-                <li key={t.id} className="topic-item">
-                  <div className="topic-text">{cut(t.text, 48)}</div>
-                  <div className="topic-heat">{formatHeat(t.heat)}</div>
-                </li>
-              )}
-            />
-            */}
-
             <SideCard
               title="내 저장함"
               rightLink={{ to: '/file', text: '관리' }}
-              items={(savedArticles || []).slice(0, 6)}
+              items={(sortedArticles || []).slice(0, 6)}  // 병합된 이미지가 있는 목록을 사용
               emptyText="아직 저장된 기사가 없어요."
               renderItem={(a) => (
                 <li key={a.id || a.title} className="saved-item">
                   <Link to={`/platform/article/${a.id || 0}`} className="saved-link">
+                    {/* 작은 점 옆에 썸네일 옵션(원하면 사용) */}
+                    {/* {a.image && <img src={a.image} alt="" className="saved-thumb" onError={imgOnError} />} */}
                     <span className="dot" /> {cut(a.title || '제목 없음', 36)}
                   </Link>
                 </li>
@@ -632,8 +638,8 @@ function SideCard({ title, items = [], emptyText, rightLink, onMore, renderItem 
           title === '이슈 토픽'
             ? 'topic-list'
             : title === '오늘의 기록'
-            ? 'record-list'
-            : 'saved-list'
+              ? 'record-list'
+              : 'saved-list'
         }
       >
         {items.length ? items.map(renderItem) : <li className="saved-empty">{emptyText}</li>}

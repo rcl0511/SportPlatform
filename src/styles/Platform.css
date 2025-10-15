@@ -327,3 +327,64 @@
   
   width: 100%;
 }
+
+/* === 업로드 이미지 보이기 보완 === */
+
+/* 대표 이미지가 레이아웃에서 눌리지 않도록 확실히 블록 처리 및 크기 고정 */
+.news-main-img {
+  display: block;
+  width: clamp(160px, 22vw, 240px);
+  height: clamp(110px, 14vw, 160px);
+  object-fit: cover;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+/* 서브 썸네일도 확실히 표시 */
+.news-thumb {
+  display: block;
+  width: 100px;
+  height: 100px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+/* 혹시 부모에서 overflow가 이미지를 가리지 않게(슬라이더 부분) */
+.slide-window {
+  overflow: hidden; /* 페이지 넘김용은 유지, 카드 내부 이미지는 그대로 보임 */
+}
+.slide-track {
+  overflow: visible; /* 카드 내부 요소가 잘리지 않도록 */
+}
+
+/* saved-list에서 썸네일을 쓰고 싶다면(옵션) */
+/*
+.saved-thumb {
+  width: 20px;
+  height: 20px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+*/
+
+
+
+/* === 이미지 없을 때도 같은 크기를 차지하는 플레이스홀더 === */
+.img-placeholder {
+  background: #f4f7fc;
+  border: 1px dashed #d8e1ee;
+  box-sizing: border-box;
+}
+
+/* 이미 정의된 사이즈를 그대로 사용하되, 블록 처리 확실히 */
+.news-main-img,
+.news-thumb {
+  display: block;
+}
+
+/* (선택) 호버 시 살짝 음영으로 클릭 가능 느낌 */
+.news-main-link .img-placeholder:hover,
+.news-sub-item .img-placeholder:hover {
+  filter: brightness(0.98);
+}
+
