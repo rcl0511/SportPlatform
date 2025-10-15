@@ -1,14 +1,40 @@
 // src/pages/Platform.jsx
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useContext } from 'react';
 import '../styles/Platform.css';
 import { Link, useNavigate } from 'react-router-dom';
+import { AuthContext } from '../contexts/AuthContext';
 
-const PLACEHOLDER_IMG = '/assets/KBO.png';
+/* ===== 사용자 이름 헬퍼 (컴포넌트 밖에 선언: 호이스팅 이슈 없음) ===== */
+const getFullName = (u) => {
+  if (!u) return '기자 미상';
+  const {
+    first_name, last_name,             // snake_case
+    firstName, lastName,               // camelCase
+    name, displayName, username,
+  } = u;
+
+  // 한국식: 성+이름 붙여쓰기
+  const snake = `${last_name || ''}${first_name || ''}`.trim();
+  if (snake) return snake;
+
+  // 서양식: 성 띄어쓰기 이름
+  const camel = [lastName, firstName].filter(Boolean).join(' ').trim();
+  if (camel) return camel;
+
+  return name || displayName || username || '기자 미상';
+};
 
 export default function Platform() {
   const navigate = useNavigate();
+  const { userInfo } = useContext(AuthContext);
 
-  const scheduleTabs = ['주요 경기', 'KBO', '야구 기타'];
+  // 로그인 사용자 이름 -> "홍길동 기자" 형태 (없으면 '기자 미상')
+  const myReporterName = useMemo(() => {
+    const n = (getFullName(userInfo) || '').trim();
+    return n && n !== '기자 미상' ? `${n} 기자` : '기자 미상';
+  }, [userInfo]);
+
+  const scheduleTabs = ['KBO'];
 
   // 탭 선택 상태
   const [activeTab, setActiveTab] = useState(scheduleTabs[0]);
@@ -53,7 +79,6 @@ export default function Platform() {
       awayLogo: '/SAMSUNG.png',
       stadium: '대구',
       league: 'KBO',
-      
     },
     {
       status: '18:30 예정',
@@ -96,7 +121,6 @@ export default function Platform() {
     },
 
     // 종료된 경기 (어제)
-
     {
       status: '종료',
       date: yesterday,
@@ -196,7 +220,6 @@ export default function Platform() {
   // 탭에 따른 경기 리스트 필터
   const filteredMatches = useMemo(() => {
     if (activeTab === 'KBO') return matchListWithIds.filter((m) => m.league === 'KBO');
-    if (activeTab === '야구 기타') return matchListWithIds.filter((m) => m.league !== 'KBO');
     return matchListWithIds; // '주요 경기'
   }, [activeTab, matchListWithIds]);
 
@@ -254,7 +277,7 @@ export default function Platform() {
   }
 
   function imgOnError(e) {
-    e.currentTarget.src = PLACEHOLDER_IMG;
+    e.currentTarget.style.display = 'none';
   }
 
   return (
@@ -436,18 +459,21 @@ export default function Platform() {
                     className="news-main-link"
                   >
                     <article className="news-main">
-                      <img
-                        src={sortedArticles[0].image || PLACEHOLDER_IMG}
-                        alt={sortedArticles[0].title || 'main'}
-                        className="news-main-img"
-                        onError={imgOnError}
-                      />
+                      {sortedArticles[0].image && (
+                        <img
+                          src={sortedArticles[0].image}
+                          alt={sortedArticles[0].title || 'main'}
+                          className="news-main-img"
+                          onError={imgOnError}
+                        />
+                      )}
+
                       <div>
                         <h3 className="news-main-title">
                           {sortedArticles[0].title || '제목 없음'}
                         </h3>
                         <div className="news-main-reporter">
-                          {sortedArticles[0].reporter || '기자 미상'}
+                          {sortedArticles[0].reporter || myReporterName}
                         </div>
                         <div className="news-main-views">
                           {viewsText(sortedArticles[0].views)}
@@ -475,15 +501,17 @@ export default function Platform() {
                       className="news-sub-item"
                       key={item.id || item.title}
                     >
-                      <img
-                        src={item.image || PLACEHOLDER_IMG}
-                        alt="thumb"
-                        className="news-thumb"
-                        onError={imgOnError}
-                      />
+                      {item.image && (
+                        <img
+                          src={item.image}
+                          alt="thumb"
+                          className="news-thumb"
+                          onError={imgOnError}
+                        />
+                      )}
                       <div>
                         <div className="news-sub-title">{item.title || '제목 없음'}</div>
-                        <div className="news-sub-reporter">{item.reporter || '기자 미상'}</div>
+                        <div className="news-sub-reporter">{item.reporter || myReporterName}</div>
                         <div className="news-sub-views">{viewsText(item.views)}</div>
                       </div>
                     </Link>
@@ -494,9 +522,9 @@ export default function Platform() {
           </section>
         </div>
 
-        {/* 우측 사이드: 기록 / 이슈 토픽(히트율) / 내 저장함 */}
         <aside className="right-column" aria-label="사이드 정보">
           <div className="right-sticky">
+            {/*
             <SideCard
               title="오늘의 기록"
               items={records.slice(0, 5)}
@@ -523,6 +551,7 @@ export default function Platform() {
                 </li>
               )}
             />
+            */}
 
             <SideCard
               title="내 저장함"

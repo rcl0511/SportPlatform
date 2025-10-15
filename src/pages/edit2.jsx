@@ -12,11 +12,9 @@ const Edit2 = () => {
   const [today, setToday] = useState('');
 
   useEffect(() => {
-    // localStorage 요청사항 불러오기
     const storedSubject = localStorage.getItem('edit_subject') || '';
     if (storedSubject) setCustomTitle(storedSubject);
 
-    // 오늘 날짜
     const now = new Date();
     setToday(
       now.toLocaleDateString('en-US', {
@@ -28,15 +26,15 @@ const Edit2 = () => {
   }, []);
 
   const handleStart = () => {
-    const base64 = localStorage.getItem('edit_file');        // dataURL or CSV text
-    const fileName = localStorage.getItem('edit_fileName');  // file name
+    const base64 = localStorage.getItem('edit_file');
+    const fileName = localStorage.getItem('edit_fileName');
 
     navigate('/edit3', {
       state: {
-        topic: (customTitle || '').trim(), // Edit3에서 추천제목 다시 받음
+        topic: (customTitle || '').trim(),
         base64,
         fileName,
-        reset: true, // Edit3가 페이지/스토리지 리셋하도록 신호
+        reset: true,
       },
     });
   };
@@ -53,13 +51,14 @@ const Edit2 = () => {
       <div className="edit-userinfo">
         <div className="edit-userinfo-inner">
           <div className="edit-avatar" />
-          {/* 필요하다면 사용자명/부서 추가 */}
+          <div className="edit-username">
+            <strong>{userInfo?.name || '작성자'}</strong>
+          </div>
         </div>
       </div>
 
       {/* Form */}
       <div className="edit-form">
-        {/* 요청사항 */}
         <div className="form-group">
           <label>요청사항</label>
           <input
@@ -69,13 +68,11 @@ const Edit2 = () => {
           />
         </div>
 
-        {/* 작성 날짜 */}
         <div className="form-group">
           <label>기사 작성 날짜</label>
           <div className="readonly-input">{today}</div>
         </div>
 
-        {/* 버튼 */}
         <div className="edit-actions">
           <button className="btn-primary" onClick={handleStart}>
             기사 작성 시작

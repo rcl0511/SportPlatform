@@ -9,6 +9,7 @@ import '../styles/Edit3.css';
    ========================================================= */
 const CONFIG = {
   REPORT_ENDPOINT: 'https://api.jolpai-backend.shop/api/generate-report',
+  //REPORT_ENDPOINT: '/api/generate-report',
   USE_CAPTION_AS_TITLE_FALLBACK: true,
   REGENERATE_ON_TITLE_SELECT: false, // 타이틀 클릭 시 본문 재생성까지 할지
   MAX_RETRIES: 1,
@@ -20,6 +21,42 @@ const stripChatMarkers = (val) => {
   if (typeof val !== 'string') return val;
   const noMarkers = val.replace(/<\|[^|>]+?\|>/g, '');
   return noMarkers.replace(/^\s*(assistant:|user:)\s*/gi, '').trim();
+};
+
+/** ✅ 보기 좋은 이름 만들기 (camel + snake + username/email 대응) */
+const getFullName = (u) => {
+  if (!u) return '이름없음';
+  const {
+    name, displayName,               // 전체 이름
+    firstName, lastName,             // camelCase
+    first_name, last_name,           // snake_case
+    username, email,
+  } = u;
+
+  // 1) 명시적 전체 이름
+  if (name) return String(name).trim();
+  if (displayName) return String(displayName).trim();
+
+  // 2) firstName + lastName (띄어쓰기)
+  const camel = [lastName, firstName].filter(Boolean).join(' ').trim();
+  if (camel) return camel;
+
+  // 3) first_name + last_name (붙여쓰기: 한국식)
+  const snake = `${first_name || ''}${last_name || ''}`.trim();
+  if (snake) return snake;
+
+  // 4) username / email에서 사용자 친화적으로
+  const idLike = username || email || '';
+  if (idLike.includes('@')) return idLike.split('@')[0]; // 이메일이면 @ 앞만
+  if (idLike) return idLike;
+
+  return '이름없음';
+};
+
+/** 필요하면 빈 문자열이 더 안전할 때 사용하는 래퍼 */
+const getDisplayName = (u) => {
+  const n = getFullName(u);
+  return n === '이름없음' ? '' : n;
 };
 
 const Edit3 = () => {
@@ -113,7 +150,7 @@ const Edit3 = () => {
 
       const cleanTitles = expanded
         .map(t => stripChatMarkers(t || ''))
-        .map(t => t.replace(/^[-•\s]+/, '')) // 앞 기호 제거 안전망
+        .map(t => t.replace(/^[-•\s]+/, ''))
         .filter(Boolean);
 
       setAllTitles(cleanTitles);
@@ -268,7 +305,8 @@ const Edit3 = () => {
         </div>
         <div className="row">
           <div className="col value">
-            {userInfo ? `${userInfo.firstName}${userInfo.lastName}` : '이름없음'}
+            {/* ✅ 다양한 케이스에서 사람 이름을 자연스럽게 표기 */}
+            {getFullName(userInfo)}
           </div>
           <div className="col value" style={{ textAlign: 'center' }}>
             {userInfo?.department || '부서없음'}
@@ -356,7 +394,7 @@ const Edit3 = () => {
         />
 
         {/* 이미지 프리뷰 */}
-        {imageUrl && ['top','bottom'].includes(imagePosition) && (
+        {imageUrl && ['top', 'bottom'].includes(imagePosition) && (
           <div
             className="image-wrapper"
             style={{ textAlign: imageAlign, marginTop: imageMarginTop, marginLeft: imageMarginLeft }}
@@ -365,14 +403,12 @@ const Edit3 = () => {
           </div>
         )}
 
-        {/* ✅ 완료하기 버튼 — 본문 '밑'에 배치 (CSS 수정 없이 인라인으로 고정 해제) */}
-        <div
-          className="bottom-buttons"
-
-        >
+        {/* ✅ 완료하기 버튼 — 여기서 saved_files에 기사(이미지 포함) 저장 */}
+        <div className="bottom-buttons">
           <button
             className="btn"
             onClick={() => {
+              // 1) 개별 편집 값 저장
               localStorage.setItem('edit_content', reportContent);
               localStorage.setItem('edit_subject', reportTitle);
               localStorage.setItem('edit_tags', JSON.stringify(reportTags));
@@ -380,11 +416,37 @@ const Edit3 = () => {
               if (imageUrl) {
                 localStorage.setItem('edit_image', imageUrl);
                 localStorage.setItem('edit_image_position', imagePosition);
-                localStorage.setItem('edit_image_width', imageWidth.toString());
+                localStorage.setItem('edit_image_width', String(imageWidth));
                 localStorage.setItem('edit_image_align', imageAlign);
-                localStorage.setItem('edit_image_marginTop', imageMarginTop.toString());
-                localStorage.setItem('edit_image_marginLeft', imageMarginLeft.toString());
+                localStorage.setItem('edit_image_marginTop', String(imageMarginTop));
+                localStorage.setItem('edit_image_marginLeft', String(imageMarginLeft));
               }
+
+              // 2) Platform이 읽는 saved_files에 기사 객체 푸시 (대표 이미지 포함)
+              const article = {
+                id: `art-${Date.now()}`,
+                title: reportTitle || '제목 없음',
+                // ✅ reporter에 full name 사용 (fallback: getDisplayName → '기자 미상')
+                reporter:
+                  getFullName(userInfo) ||
+                  getDisplayName(userInfo) ||
+                  '기자 미상',
+                views: 1, // 초기 조회수
+                image: imageUrl || null, // ✅ Platform 뉴스 카드에서 표시됨
+                tags: Array.isArray(reportTags) && reportTags.length ? reportTags : ['KBO', '속보'],
+                content: reportContent || '',
+                createdAt: new Date().toISOString(),
+              };
+              try {
+                const prev = JSON.parse(localStorage.getItem('saved_files') || '[]');
+                const next = [article, ...(Array.isArray(prev) ? prev : [])];
+                localStorage.setItem('saved_files', JSON.stringify(next));
+              } catch {
+                localStorage.setItem('saved_files', JSON.stringify([article]));
+              }
+
+              // 3) 이동 경로: Platform에서 바로 확인하려면 아래 주석 해제
+              // navigate('/Platform');
               navigate('/Result');
             }}
           >

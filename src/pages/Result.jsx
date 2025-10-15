@@ -9,6 +9,27 @@ import '../styles/Result.css';
 const MAX_SAVED_ITEMS = 200;   // 메타 목록 최대 유지 개수
 const PREVIEW_LEN = 300;       // saved_files에 저장할 본문 미리보기 길이
 
+/** ✅ 다양한 형태의 사용자 객체에서 보기 좋은 이름 산출
+ * - 우선순위: first_name+last_name → firstName+lastName → name/displayName → username → '기자 미상'
+ * - 공백/붙여쓰기 정책: 한국식(성+이름 붙여쓰기) 기본, 원하는 경우 사이 공백을 넣어도 됨.
+ */
+const getFullName = (u) => {
+  if (!u) return '기자 미상';
+  const {
+    first_name, last_name,             // snake_case
+    firstName, lastName,               // camelCase
+    name, displayName, username,
+  } = u;
+
+  const snake = `${last_name || ''}${first_name || ''}`.trim();
+  if (snake) return snake;
+
+  const camel = [lastName, firstName].filter(Boolean).join(' ').trim();
+  if (camel) return camel;
+
+  return name || displayName || username || '기자 미상';
+};
+
 const hexToRgb = (hex) => {
   const [r, g, b] = hex.replace('#', '').match(/.{2}/g).map((x) => parseInt(x, 16));
   return { r, g, b };
@@ -126,10 +147,10 @@ const Result = () => {
       .catch(() => console.error('폰트 로드 실패'));
   }, []);
 
-  // 사용자 정보 → 편집 필드 세팅
+  // 사용자 정보 → 편집 필드 세팅 (✅ 이름 표시에 getFullName 적용)
   useEffect(() => {
     if (!userInfo) return;
-    setEditableName(`${userInfo.firstName}${userInfo.lastName}`);
+    setEditableName(getFullName(userInfo));
     setEditableDept(userInfo.department || '');
   }, [userInfo]);
 
@@ -208,7 +229,8 @@ const Result = () => {
       content: preview,
       fullContent: reportContent,
       date: editableDate || new Date().toISOString().slice(0, 10),
-      reporter: editableName || (userInfo ? `${userInfo.firstName}${userInfo.lastName}` : '기자 미상'),
+      // ✅ reporter 기본값에 getFullName 적용
+      reporter: editableName || getFullName(userInfo),
       department: editableDept || '',
       email: userInfo?.email || '',
       hasImage: Boolean(imageUrl),
@@ -264,11 +286,10 @@ const Result = () => {
     localStorage.setItem('edit_subject', newArticleMeta.title);
     localStorage.setItem('edit_content', reportContent || '');
 
-    // 사용자 정보(선택) 업데이트
+    // 사용자 정보(선택) 업데이트: 이름은 사용자가 직접 편집한 텍스트를 유지
     const updatedUser = {
       ...userInfo,
-      firstName: (editableName || '').charAt(0) || userInfo?.firstName || '',
-      lastName: (editableName || '').slice(1) || userInfo?.lastName || '',
+      // first_name / last_name 체계가 있는 경우 건드리지 않고, 부서만 동기화
       department: editableDept || userInfo?.department || '',
     };
     setUserInfo(updatedUser);
@@ -309,7 +330,7 @@ const Result = () => {
 
     // 메타
     pdf.setFontSize(12);
-    pdf.text(`작성자: ${editableName}`, margin.left, margin.top + 60);
+    pdf.text(`작성자: ${editableName || getFullName(userInfo)}`, margin.left, margin.top + 60);
     pdf.text(`부서: ${editableDept}`, margin.left + 200, margin.top + 60);
     pdf.text(`작성날짜: ${editableDate}`, margin.left + pageWidth, margin.top + 60, { align: 'right' });
 
@@ -372,7 +393,8 @@ const Result = () => {
               </>
             ) : (
               <>
-                <span>작성자: {editableName}</span>
+                {/* ✅ 화면 표시에서도 getFullName을 기본값으로 사용 */}
+                <span>작성자: {editableName || getFullName(userInfo)}</span>
                 <span>부서: {editableDept}</span>
                 <span>작성날짜: {editableDate}</span>
               </>
