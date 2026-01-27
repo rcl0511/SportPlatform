@@ -110,13 +110,97 @@ export default function Platform() {
     return d.toISOString();
   }
 
-  // === KBO 일정 불러오기 (S3) ===
+  // === KBO 일정 불러오기 (백엔드 API 우선, 실패 시 S3) ===
   useEffect(() => {
     async function loadSchedule() {
+      const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:8000';
+      
+      // 1순위: 백엔드 API에서 KBO 스크래핑
+      try {
+        console.log(`🔍 백엔드 API 호출 시도: ${API_BASE}/api/kbo-schedule`);
+        const apiRes = await fetch(`${API_BASE}/api/kbo-schedule`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        console.log(`📡 백엔드 응답 상태: ${apiRes.status}`);
+        
+        if (apiRes.ok) {
+          const apiData = await apiRes.json();
+          console.log('📦 백엔드 응답 데이터:', apiData);
+          
+          if (apiData.success && apiData.games && apiData.games.length > 0) {
+            const games = apiData.games;
+            
+            // 백엔드 API 데이터 처리
+            const normalized = games.map((g, i) => ({
+              id: i,
+              dateText: g.dateText || g.date || "",
+              timeText: g.timeText || g.time || "",
+              playText: g.playText || g.play || `${g.home || ''} vs ${g.away || ''}`,
+              stadium: g.stadium || "",
+              dateObj: g.date ? new Date(g.date) : null,
+              home: g.home || '',
+              away: g.away || '',
+            })).filter((g) => g.dateObj);
+            
+            const today = new Date();
+            const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+            const todayStr = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
+            const toKey = (d) => `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+            
+            const normalizedWithStatus = normalized.map((g) => {
+              const isToday = g.dateObj && toKey(g.dateObj) === todayStr;
+              return {
+                ...g,
+                isToday,
+                statusTag: isToday ? "LIVE" : g.dateObj > today ? "예정" : "종료",
+              };
+            });
+
+            const upcoming = normalizedWithStatus
+              .filter((g) => g.dateObj >= todayOnly)
+              .sort((a, b) => a.dateObj - b.dateObj)
+              .slice(0, 5);
+              
+            const finished = normalizedWithStatus
+              .filter((g) => g.dateObj < todayOnly)
+              .sort((a, b) => b.dateObj - a.dateObj)
+              .slice(0, 5);
+
+            setScheduleData(normalized);
+            setUpcomingMatches(upcoming);
+            setRecentMatches(finished);
+            console.log("📅 백엔드 API에서 일정 로드 성공");
+            return; // 성공하면 여기서 종료
+          } else {
+            console.warn('⚠️ 백엔드 API 응답에 게임 데이터가 없음:', apiData);
+          }
+        } else {
+          console.warn(`⚠️ 백엔드 API 응답 실패: ${apiRes.status} ${apiRes.statusText}`);
+          // 404인 경우 백엔드에 엔드포인트가 없는 것
+          if (apiRes.status === 404) {
+            console.error('❌ 백엔드에 /api/kbo-schedule 엔드포인트가 없습니다. 백엔드 코드를 확인하세요.');
+          }
+        }
+      } catch (apiErr) {
+        console.error('❌ 백엔드 API 호출 실패:', apiErr);
+        console.error('   API 주소:', `${API_BASE}/api/kbo-schedule`);
+        console.error('   오류 상세:', apiErr.message);
+      }
+      
+      // 2순위: S3에서 기존 데이터 로드 (CORS 오류 가능성 있음)
+      console.log('🔄 S3에서 데이터 로드 시도...');
       try {
         const res = await fetch(
-          "https://kbo-schedule-data.s3.ap-northeast-2.amazonaws.com/kbo_schedule.json"
+          "https://kbo-schedule-data.s3.ap-northeast-2.amazonaws.com/kbo_schedule.json",
+          {
+            mode: 'cors', // CORS 명시
+          }
         );
+        if (!res.ok) throw new Error(`S3 응답 실패: ${res.status} ${res.statusText}`);
         const json = await res.json();
         const games = json.games || [];
 
@@ -182,10 +266,22 @@ export default function Platform() {
         setScheduleData(normalized);
         setUpcomingMatches(upcoming);
         setRecentMatches(finished);
-        console.log("📅 upcoming:", upcoming);
-        console.log("📅 finished:", finished);
-      } catch (err) {
-        console.error("❌ 일정 불러오기 실패:", err);
+        console.log("📅 S3에서 일정 로드 성공");
+      } catch (s3Err) {
+        console.error("❌ S3에서 일정 불러오기 실패:", s3Err);
+        console.error('   오류 타입:', s3Err.name);
+        console.error('   오류 메시지:', s3Err.message);
+        
+        // CORS 오류인 경우 명확히 표시
+        if (s3Err.message.includes('CORS') || s3Err.message.includes('blocked')) {
+          console.error('   ⚠️ CORS 오류: S3에서 직접 데이터를 가져올 수 없습니다.');
+          console.error('   💡 해결 방법: 백엔드 API를 통해 데이터를 가져오세요.');
+        }
+        
+        // 실패해도 빈 배열로 설정하여 앱이 멈추지 않도록 함
+        setScheduleData([]);
+        setUpcomingMatches([]);
+        setRecentMatches([]);
       }
     }
 

@@ -6,12 +6,16 @@ CORS 및 JWT 인증이 포함된 완전한 백엔드 예시
 from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.responses import JSONResponse
 from typing import List, Optional
 from pydantic import BaseModel
 from datetime import datetime, timedelta
 import jwt
 from passlib.context import CryptContext
 import os
+import requests
+from bs4 import BeautifulSoup
+import re
 
 # JWT 설정
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
@@ -416,6 +420,68 @@ async def root():
 @app.get("/health")
 async def health():
     return {"status": "healthy"}
+
+# ============================================
+# KBO 일정 API
+# ============================================
+
+@app.get("/api/kbo-schedule")
+async def get_kbo_schedule():
+    """
+    KBO 경기 일정을 가져옵니다.
+    S3 또는 KBO 웹사이트에서 데이터를 가져옵니다.
+    """
+    try:
+        # S3에서 데이터 가져오기 시도
+        s3_url = "https://kbo-schedule-data.s3.ap-northeast-2.amazonaws.com/kbo_schedule.json"
+        s3_response = requests.get(s3_url, timeout=10)
+        
+        if s3_response.status_code == 200:
+            s3_data = s3_response.json()
+            games = s3_data.get("games", [])
+            
+            # 데이터 정규화
+            normalized = []
+            for i, g in enumerate(games):
+                # 날짜 파싱
+                date_str = g.get("date", "")
+                date_match = re.match(r"(\d{2})\.(\d{2})", date_str)
+                if date_match:
+                    month, day = int(date_match.group(1)), int(date_match.group(2))
+                    date_obj = datetime(2025, month, day)
+                else:
+                    continue
+                
+                # HTML 태그 제거
+                def strip_tags(html):
+                    if not html:
+                        return ""
+                    return re.sub(r"</?[^>]+(>|$)", "", str(html)).replace("vs", " vs ").strip()
+                
+                normalized.append({
+                    "id": i,
+                    "date": date_obj.isoformat(),
+                    "dateText": date_str,
+                    "timeText": strip_tags(g.get("time", "")),
+                    "playText": strip_tags(g.get("play", "")),
+                    "stadium": g.get("stadium", ""),
+                    "home": "",
+                    "away": "",
+                })
+            
+            return JSONResponse({
+                "success": True,
+                "games": normalized
+            })
+        else:
+            raise HTTPException(status_code=500, detail="S3 데이터 로드 실패")
+    except Exception as e:
+        # 실패 시 빈 배열 반환
+        return JSONResponse({
+            "success": False,
+            "games": [],
+            "error": str(e)
+        })
 
 if __name__ == "__main__":
     import uvicorn
