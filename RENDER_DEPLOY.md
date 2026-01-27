@@ -25,8 +25,9 @@ git push origin main
 
 Render 대시보드에서 "Environment" 탭으로 이동하여 추가:
 
-- **SECRET_KEY**: JWT 토큰 암호화용 비밀키 (랜덤 문자열 생성)
-  - 예: `openssl rand -hex 32` 명령어로 생성하거나 Render의 "Generate" 버튼 사용
+- **SECRET_KEY**: JWT 토큰 암호화용 비밀키
+  - 값: `927213286c7a51dd64b95c7aee0a8d9c`
+
 
 ### Step 4: CORS 설정 업데이트
 
@@ -35,8 +36,7 @@ Render 대시보드에서 "Environment" 탭으로 이동하여 추가:
 ```python
 allow_origins=[
     "http://localhost:3000",  # 로컬 개발
-    "https://your-frontend-domain.netlify.app",  # Netlify 배포 주소
-    "https://your-frontend-domain.onrender.com",  # Render 프론트엔드 주소
+    "https://sportsnewsai.netlify.app",  # Netlify 배포 주소
 ],
 ```
 
@@ -47,7 +47,7 @@ allow_origins=[
 Render에서 배포한 백엔드 주소로 변경:
 
 ```env
-REACT_APP_API_BASE=https://your-backend-name.onrender.com
+REACT_APP_API_BASE=https://sportplatform.onrender.com
 ```
 
 예시:

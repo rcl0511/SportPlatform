@@ -11,7 +11,6 @@ from typing import List, Optional
 from pydantic import BaseModel
 from datetime import datetime, timedelta
 import jwt
-import bcrypt
 from passlib.context import CryptContext
 import os
 
@@ -32,8 +31,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",  # 로컬 개발
-        "https://your-frontend-domain.netlify.app",  # Netlify 배포 주소
-        # Render에서 배포한 프론트엔드 주소도 추가하세요
+        "https://sportsnewsai.netlify.app",  # Netlify 배포 주소
     ],
     allow_credentials=True,
     allow_methods=["*"],
