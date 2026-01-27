@@ -92,6 +92,12 @@ export default function Platform() {
   const [records, setRecords] = useState([]);
   const [hotTopics, setHotTopics] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [articleTab, setArticleTab] = useState('popular'); // popular, latest, category
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedTeam, setSelectedTeam] = useState('all');
+  const [naverArticles, setNaverArticles] = useState([]);
+  const [loadingNaver, setLoadingNaver] = useState(false);
 
   // 날짜 헬퍼
   const today = new Date().toISOString().split('T')[0];
@@ -211,14 +217,8 @@ export default function Platform() {
     [matchList]
   );
 
-  // 더미 기사 (있으면 표시되지만, 실제 저장된 기사에 밀림)
-  const fallbackArticles = [
-    { id: 1, title: '‘홈런 쇼’ KBO 올스타전, 올해 MVP는 누구?', reporter: '이정원 기자', views: 15230, image: '/assets/article1.jpg' },
-    { id: 2, title: '역전극의 주인공, 한화의 신예 투수 등장', reporter: '박지훈 기자', views: 12045, image: '/assets/article2.jpg' },
-    { id: 3, title: 'LG, 9회말 끝내기 승리…관중 2만 5천 환호', reporter: '김수연 기자', views: 11020, image: '/assets/article3.jpg' },
-    { id: 4, title: 'NC, KT 꺾고 5연승 질주', reporter: '홍길동 기자', views: 9800, image: '/assets/article4.jpg' },
-    { id: 5, title: '롯데, 3년 만에 포스트시즌 진출 확정', reporter: '최은지 기자', views: 8700, image: '/assets/article5.jpg' }
-  ];
+  // 더미 기사 제거 - 실제 데이터만 사용
+  const fallbackArticles = [];
 
   /** 업로드 이미지 없을 때도 동일 크기 유지용 */
   function ImageOrBlank({ src, className, alt, onError }) {
@@ -230,6 +230,178 @@ export default function Platform() {
   }
 
 
+
+  // 네이버 야구 기사 로드
+  useEffect(() => {
+    async function loadNaverArticles() {
+      const API_BASE = process.env.REACT_APP_API_BASE || 'https://api.jolpai-backend.shop';
+      const today = new Date().toISOString().slice(0, 10);
+      const cacheKey = `naver_articles_${today}`;
+      
+      // 오늘 날짜의 캐시 확인
+      try {
+        const cached = localStorage.getItem(cacheKey);
+        if (cached) {
+          const cachedData = JSON.parse(cached);
+          const cacheDate = cachedData.date;
+          if (cacheDate === today && cachedData.articles && cachedData.articles.length > 0) {
+            setNaverArticles(cachedData.articles);
+            return;
+          }
+        }
+      } catch {}
+
+      setLoadingNaver(true);
+      try {
+        const res = await fetch(`${API_BASE}/api/naver-baseball-articles`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.articles && data.articles.length > 0) {
+            // 기사 요약 생성
+            const articlesWithSummary = await Promise.all(
+              data.articles.map(async (article) => {
+                const summary = await generateSummary(article.title);
+                return {
+                  ...article,
+                  summary: summary || `${article.title}에 대한 최신 야구 뉴스입니다.`,
+                };
+              })
+            );
+            
+            setNaverArticles(articlesWithSummary);
+            // 캐시 저장
+            localStorage.setItem(cacheKey, JSON.stringify({
+              date: today,
+              articles: articlesWithSummary,
+            }));
+          }
+        } else {
+          // API 실패 시 샘플 데이터 표시 (개발용)
+          const sampleArticles = [
+            {
+              title: 'LG 트윈스, 시즌 첫 10연승 달성',
+              summary: 'LG 트윈스가 어제 경기에서 승리하며 시즌 첫 10연승을 달성했습니다. 팀의 투타 밸런스가 완벽하게 맞아떨어지며 강력한 경기력을 보여주고 있습니다.',
+              image: '/assets/article1.jpg',
+              source: '네이버 스포츠',
+              date: '1시간 전',
+              link: 'https://m.sports.naver.com/kbaseball/index',
+            },
+            {
+              title: 'KIA 타이거즈 신인 투수, 데뷔전 완벽한 피칭',
+              summary: 'KIA 타이거즈의 신인 투수가 데뷔전에서 7이닝 무실점의 완벽한 피칭을 선보이며 화제가 되고 있습니다.',
+              image: '/assets/article2.jpg',
+              source: '네이버 스포츠',
+              date: '2시간 전',
+              link: 'https://m.sports.naver.com/kbaseball/index',
+            },
+            {
+              title: 'SSG 랜더스, 외국인 타자 영입 발표',
+              summary: 'SSG 랜더스가 새로운 외국인 타자를 영입한다고 발표했습니다. 팀의 공격력을 강화하기 위한 전략적 영입으로 평가됩니다.',
+              image: '/assets/article3.jpg',
+              source: '네이버 스포츠',
+              date: '3시간 전',
+              link: 'https://m.sports.naver.com/kbaseball/index',
+            },
+            {
+              title: 'NC 다이노스, 포스트시즌 진출 확정',
+              summary: 'NC 다이노스가 어제 경기 승리로 포스트시즌 진출을 확정지었습니다. 팬들의 환호가 이어지고 있습니다.',
+              image: '/assets/article4.jpg',
+              source: '네이버 스포츠',
+              date: '4시간 전',
+              link: 'https://m.sports.naver.com/kbaseball/index',
+            },
+            {
+              title: '롯데 자이언츠, 연장전 끝내기 승리',
+              summary: '롯데 자이언츠가 어제 연장 12회말 끝내기 안타로 극적인 승리를 거두었습니다. 관중석은 함성으로 가득 찼습니다.',
+              image: '/assets/article5.jpg',
+              source: '네이버 스포츠',
+              date: '5시간 전',
+              link: 'https://m.sports.naver.com/kbaseball/index',
+            },
+          ];
+          setNaverArticles(sampleArticles);
+          localStorage.setItem(cacheKey, JSON.stringify({
+            date: today,
+            articles: sampleArticles,
+          }));
+        }
+      } catch (err) {
+        console.warn('네이버 기사 로드 실패:', err);
+        // 실패 시 샘플 데이터 표시
+        const sampleArticles = [
+          {
+            title: 'LG 트윈스, 시즌 첫 10연승 달성',
+            summary: 'LG 트윈스가 어제 경기에서 승리하며 시즌 첫 10연승을 달성했습니다.',
+            image: '/assets/article1.jpg',
+            source: '네이버 스포츠',
+            date: '1시간 전',
+            link: 'https://m.sports.naver.com/kbaseball/index',
+          },
+          {
+            title: 'KIA 타이거즈 신인 투수, 데뷔전 완벽한 피칭',
+            summary: 'KIA 타이거즈의 신인 투수가 데뷔전에서 7이닝 무실점의 완벽한 피칭을 선보였습니다.',
+            image: '/assets/article2.jpg',
+            source: '네이버 스포츠',
+            date: '2시간 전',
+            link: 'https://m.sports.naver.com/kbaseball/index',
+          },
+        ];
+        setNaverArticles(sampleArticles);
+      } finally {
+        setLoadingNaver(false);
+      }
+    }
+
+    loadNaverArticles();
+  }, []);
+
+  // 기사 요약 생성 함수
+  async function generateSummary(title) {
+    // 간단한 요약 생성 (실제로는 AI API를 사용하거나 본문을 가져와야 함)
+    // 여기서는 제목 기반으로 간단한 요약 생성
+    try {
+      const API_KEY = process.env.REACT_APP_OPENROUTER_API_KEY;
+      if (!API_KEY) return null;
+
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${API_KEY}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': window.location.origin,
+          'X-Title': 'Sports Platform',
+        },
+        body: JSON.stringify({
+          model: 'openai/gpt-3.5-turbo',
+          messages: [
+            {
+              role: 'system',
+              content: '당신은 스포츠 기사 요약 전문가입니다. 기사 제목을 보고 2-3문장으로 간단히 요약해주세요.',
+            },
+            {
+              role: 'user',
+              content: `다음 야구 기사 제목을 요약해주세요: ${title}`,
+            },
+          ],
+          max_tokens: 100,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        return data.choices?.[0]?.message?.content?.trim() || null;
+      }
+    } catch (err) {
+      console.warn('요약 생성 실패:', err);
+    }
+    return null;
+  }
 
   // 초기 로드 & 로딩 스켈레톤
   useEffect(() => {
@@ -243,26 +415,10 @@ export default function Platform() {
       setSavedArticles(merged);
 
       const storedRecords = JSON.parse(localStorage.getItem('recent_records') || '[]');
-      setRecords(
-        storedRecords.length
-          ? storedRecords
-          : [
-            { id: 1, title: 'LG 5-3 KIA (8/14)', detail: '9회말 끝내기 2루타', tag: '경기 요약' },
-            { id: 2, title: '두산 7-2 SSG (8/13)', detail: '선발 7이닝 1실점 QS', tag: '투수 기록' },
-            { id: 3, title: 'NC 3-0 KT (8/12)', detail: '팀 무실점 승리', tag: '클린시트' }
-          ]
-      );
+      setRecords(storedRecords);
 
       const storedTopics = JSON.parse(localStorage.getItem('hot_topics') || '[]');
-      setHotTopics(
-        storedTopics.length
-          ? storedTopics
-          : [
-            { id: 't1', text: '루키 외야수, 데뷔 첫 홈런으로 팀 승리 견인', heat: 46 },
-            { id: 't2', text: '8월 MVP 레이스, 불펜 에이스 급부상', heat: 21 },
-            { id: 't3', text: '트레이드 마감 임박, 각 팀 보강 시나리오', heat: 33 }
-          ]
-      );
+      setHotTopics(storedTopics);
     } catch {
       setSavedArticles([]);
     } finally {
@@ -287,18 +443,89 @@ export default function Platform() {
       .sort((a, b) => safeNum(b.views) - safeNum(a.views));
   }, [savedArticles]);
 
-  // 2) 더미 기사: 실제와 중복 제거 후 접두사 id 부여
-  const dummyArticles = useMemo(() => {
-    const realKeys = new Set(realArticles.map(toKey));
-    return fallbackArticles
-      .filter((d) => !realKeys.has(toKey(d)))
-      .map((d, i) => ({ ...d, id: `d-${d.id ?? i}`, isDummy: true }));
-  }, [realArticles, fallbackArticles]);
-
-  // 3) 최종 기사 목록: 실제 ↑ → 더미 ↓
+  // 더미 기사 제거 - 실제 기사만 사용
   const sortedArticles = useMemo(() => {
-    return [...realArticles, ...dummyArticles];
-  }, [realArticles, dummyArticles]);
+    return realArticles;
+  }, [realArticles]);
+
+  // 카테고리 목록 추출
+  const categories = useMemo(() => {
+    const catSet = new Set();
+    sortedArticles.forEach((a) => {
+      if (Array.isArray(a.tags)) {
+        a.tags.forEach((tag) => catSet.add(tag));
+      }
+    });
+    return Array.from(catSet).sort();
+  }, [sortedArticles]);
+
+  // 필터링된 기사
+  const filteredArticles = useMemo(() => {
+    let filtered = sortedArticles;
+
+    // 검색 필터
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(
+        (a) =>
+          (a.title || '').toLowerCase().includes(query) ||
+          (a.content || '').toLowerCase().includes(query) ||
+          (a.reporter || '').toLowerCase().includes(query) ||
+          (a.tags || []).some((tag) => tag.toLowerCase().includes(query))
+      );
+    }
+
+    // 카테고리 필터
+    if (selectedCategory !== 'all') {
+      filtered = filtered.filter((a) => (a.tags || []).includes(selectedCategory));
+    }
+
+    // 팀 필터
+    if (selectedTeam !== 'all') {
+      filtered = filtered.filter((a) => (a.team || '').includes(selectedTeam));
+    }
+
+    // 탭별 정렬
+    if (articleTab === 'popular') {
+      return filtered.sort((a, b) => safeNum(b.views) - safeNum(a.views));
+    } else if (articleTab === 'latest') {
+      return filtered.sort((a, b) => {
+        const dateA = new Date(a.date || a.createdAt || 0);
+        const dateB = new Date(b.date || b.createdAt || 0);
+        return dateB - dateA;
+      });
+    }
+
+    return filtered;
+  }, [sortedArticles, searchQuery, selectedCategory, selectedTeam, articleTab]);
+
+  // 통계 데이터
+  const stats = useMemo(() => {
+    const total = sortedArticles.length;
+    const today = new Date().toISOString().slice(0, 10);
+    const todayArticles = sortedArticles.filter((a) => a.date === today).length;
+    const totalViews = sortedArticles.reduce((sum, a) => sum + safeNum(a.views), 0);
+    const avgViews = total > 0 ? Math.round(totalViews / total) : 0;
+
+    return {
+      total,
+      todayArticles,
+      totalViews,
+      avgViews,
+    };
+  }, [sortedArticles]);
+
+  // 팀별 기사 수
+  const teamStats = useMemo(() => {
+    const teamMap = {};
+    sortedArticles.forEach((a) => {
+      const team = a.team || '전체';
+      teamMap[team] = (teamMap[team] || 0) + 1;
+    });
+    return Object.entries(teamMap)
+      .map(([team, count]) => ({ team, count }))
+      .sort((a, b) => b.count - a.count);
+  }, [sortedArticles]);
 
   // 탭에 따른 경기 리스트 필터
   const filteredMatches = useMemo(() => {
@@ -507,14 +734,204 @@ export default function Platform() {
         </div>
       </div>
 
+      {/* 네이버 야구 기사 섹션 */}
+      {naverArticles.length > 0 && (
+        <div className="naver-articles-section">
+          <div className="section-header">
+            <h2 className="section-title">네이버 스포츠 야구 뉴스</h2>
+            <span className="section-subtitle">매일 업데이트되는 최신 야구 기사</span>
+          </div>
+          <div className="naver-articles-grid">
+            {naverArticles.map((article, idx) => (
+              <div key={idx} className="naver-article-card">
+                {article.image && (
+                  <div className="naver-article-image">
+                    <img src={article.image} alt={article.title} onError={(e) => { e.target.style.display = 'none'; }} />
+                  </div>
+                )}
+                <div className="naver-article-content">
+                  <h3 className="naver-article-title">{article.title}</h3>
+                  {article.summary && (
+                    <p className="naver-article-summary">{article.summary}</p>
+                  )}
+                  <div className="naver-article-footer">
+                    <span className="naver-article-source">{article.source}</span>
+                    {article.date && <span className="naver-article-date">{article.date}</span>}
+                    {article.link && (
+                      <a
+                        href={article.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="naver-article-link"
+                      >
+                        원문 보기 →
+                      </a>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {loadingNaver && (
+        <div className="naver-loading">
+          <div className="loading-spinner"></div>
+          <span>네이버 야구 기사를 불러오는 중...</span>
+        </div>
+      )}
+
+      {/* 검색 바 */}
+      <div className="platform-search-section">
+        <div className="search-container">
+          <input
+            type="text"
+            className="platform-search-input"
+            placeholder="기사 제목, 내용, 기자명, 태그로 검색..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          {searchQuery && (
+            <button
+              className="search-clear-btn"
+              onClick={() => setSearchQuery('')}
+            >
+              ✕
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* 통계 카드 */}
+      <div className="platform-stats-grid">
+        <div className="stat-card">
+          <div className="stat-label">전체 기사</div>
+          <div className="stat-value">{stats.total}</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-label">오늘 작성</div>
+          <div className="stat-value">{stats.todayArticles}</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-label">총 조회수</div>
+          <div className="stat-value">{stats.totalViews.toLocaleString()}</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-label">평균 조회</div>
+          <div className="stat-value">{stats.avgViews}</div>
+        </div>
+      </div>
+
+      {/* 카테고리 및 탭 필터 */}
+      <div className="platform-filters">
+        <div className="article-tabs">
+          <button
+            className={`tab-btn ${articleTab === 'popular' ? 'active' : ''}`}
+            onClick={() => setArticleTab('popular')}
+          >
+            인기 기사
+          </button>
+          <button
+            className={`tab-btn ${articleTab === 'latest' ? 'active' : ''}`}
+            onClick={() => setArticleTab('latest')}
+          >
+            최신 기사
+          </button>
+        </div>
+        {categories.length > 0 && (
+          <div className="category-filters">
+            <button
+              className={`category-filter-btn ${selectedCategory === 'all' ? 'active' : ''}`}
+              onClick={() => setSelectedCategory('all')}
+            >
+              전체
+            </button>
+            {categories.slice(0, 8).map((cat) => (
+              <button
+                key={cat}
+                className={`category-filter-btn ${selectedCategory === cat ? 'active' : ''}`}
+                onClick={() => setSelectedCategory(cat)}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+        )}
+        {teamStats.length > 0 && (
+          <div className="team-filters">
+            <button
+              className={`team-filter-btn ${selectedTeam === 'all' ? 'active' : ''}`}
+              onClick={() => setSelectedTeam('all')}
+            >
+              전체 팀
+            </button>
+            {teamStats.slice(0, 5).map(({ team, count }) => (
+              <button
+                key={team}
+                className={`team-filter-btn ${selectedTeam === team ? 'active' : ''}`}
+                onClick={() => setSelectedTeam(team)}
+              >
+                {team} ({count})
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* 팀별 기사 섹션 */}
+      {teamStats.length > 0 && selectedTeam === 'all' && (
+        <div className="team-articles-section">
+          <h2 className="section-title">팀별 기사</h2>
+          <div className="team-articles-grid">
+            {teamStats.slice(0, 6).map(({ team, count }) => {
+              const teamArticles = sortedArticles
+                .filter((a) => (a.team || '전체') === team)
+                .slice(0, 3);
+              if (teamArticles.length === 0) return null;
+              return (
+                <div key={team} className="team-article-card">
+                  <div className="team-card-header">
+                    <h3>{team}</h3>
+                    <span className="team-article-count">{count}개</span>
+                  </div>
+                  <div className="team-article-list">
+                    {teamArticles.map((article) => (
+                      <Link
+                        key={article.id}
+                        to={`/platform/article/${article.id || 0}`}
+                        className="team-article-item"
+                      >
+                        <div className="team-article-title">{article.title || '제목 없음'}</div>
+                        <div className="team-article-meta">
+                          <span>{article.reporter || '기자 미상'}</span>
+                          <span>조회 {safeNum(article.views)}</span>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* ======= 메인/우측 레이아웃 ======= */}
       <div className="content-grid">
         {/* 메인 뉴스 영역 */}
         <div className="main-column">
           <section className="news-section" aria-label="주요 뉴스">
-            <h2>
-              야구 <span className="highlight">NOW</span>
-            </h2>
+            <div className="section-header-with-tabs">
+              <h2>
+                야구 <span className="highlight">NOW</span>
+              </h2>
+              {searchQuery && (
+                <div className="search-result-info">
+                  "{searchQuery}" 검색 결과: {filteredArticles.length}개
+                </div>
+              )}
+            </div>
 
             {/* 스켈레톤 */}
             {loading ? (
@@ -534,32 +951,32 @@ export default function Platform() {
               </div>
             ) : (
               <>
-                {sortedArticles[0] ? (
+                {filteredArticles[0] ? (
                   <Link
-                    to={`/platform/article/${sortedArticles[0].id || 0}`}
+                    to={`/platform/article/${filteredArticles[0].id || 0}`}
                     className="news-main-link"
                   >
                     <article className="news-main">
                       {/* ✅ 대표 이미지: 병합된 image가 있으면 표시 */}
                       <ImageOrBlank
-                        src={sortedArticles[0].image}
-                        alt={sortedArticles[0].title || 'main'}
+                        src={filteredArticles[0].image}
+                        alt={filteredArticles[0].title || 'main'}
                         className="news-main-img"
                         onError={imgOnError}
                       />
 
                       <div>
                         <h3 className="news-main-title">
-                          {sortedArticles[0].title || '제목 없음'}
+                          {filteredArticles[0].title || '제목 없음'}
                         </h3>
                         <div className="news-main-reporter">
-                          {sortedArticles[0].reporter || myReporterName}
+                          {filteredArticles[0].reporter || myReporterName}
                         </div>
                         <div className="news-main-views">
-                          {viewsText(sortedArticles[0].views)}
+                          {viewsText(filteredArticles[0].views)}
                         </div>
                         <div className="tag-list">
-                          {(sortedArticles[0].tags || ['속보', 'KBO'])
+                          {(filteredArticles[0].tags || ['속보', 'KBO'])
                             .slice(0, 3)
                             .map((t) => (
                               <span key={t} className="tag">
@@ -575,7 +992,7 @@ export default function Platform() {
                 )}
 
                 <div className="news-sub-list">
-                  {sortedArticles.slice(1, 7).map((item) => (
+                  {filteredArticles.slice(1, 7).map((item) => (
                     <Link
                       to={`/platform/article/${item.id || 0}`}
                       className="news-sub-item"
@@ -583,11 +1000,11 @@ export default function Platform() {
                     >
                       {/* ✅ 서브 썸네일도 병합된 image로 표시 */}
                       <ImageOrBlank
-  src={item.image}
-  alt="thumb"
-  className="news-thumb"
-  onError={imgOnError}
-/>
+                        src={item.image}
+                        alt="thumb"
+                        className="news-thumb"
+                        onError={imgOnError}
+                      />
                       <div>
                         <div className="news-sub-title">{item.title || '제목 없음'}</div>
                         <div className="news-sub-reporter">{item.reporter || myReporterName}</div>
@@ -606,18 +1023,80 @@ export default function Platform() {
             <SideCard
               title="내 저장함"
               rightLink={{ to: '/file', text: '관리' }}
-              items={(sortedArticles || []).slice(0, 6)}  // 병합된 이미지가 있는 목록을 사용
+              items={(sortedArticles || []).slice(0, 6)}
               emptyText="아직 저장된 기사가 없어요."
               renderItem={(a) => (
                 <li key={a.id || a.title} className="saved-item">
                   <Link to={`/platform/article/${a.id || 0}`} className="saved-link">
-                    {/* 작은 점 옆에 썸네일 옵션(원하면 사용) */}
-                    {/* {a.image && <img src={a.image} alt="" className="saved-thumb" onError={imgOnError} />} */}
                     <span className="dot" /> {cut(a.title || '제목 없음', 36)}
                   </Link>
                 </li>
               )}
             />
+
+            {/* 인기 기사 */}
+            <SideCard
+              title="인기 기사"
+              items={sortedArticles.slice(0, 5)}
+              emptyText="인기 기사가 없어요."
+              renderItem={(a, idx) => (
+                <li key={a.id || a.title} className="popular-side-item">
+                  <Link to={`/platform/article/${a.id || 0}`} className="popular-side-link">
+                    <span className="popular-rank-small">{idx + 1}</span>
+                    <div className="popular-side-content">
+                      <div className="popular-side-title">{cut(a.title || '제목 없음', 30)}</div>
+                      <div className="popular-side-meta">
+                        <span>{viewsText(a.views)}</span>
+                        <span>{a.reporter || '기자 미상'}</span>
+                      </div>
+                    </div>
+                  </Link>
+                </li>
+              )}
+            />
+
+            {/* 카테고리별 기사 수 */}
+            {categories.length > 0 && (
+              <SideCard
+                title="카테고리"
+                items={categories.slice(0, 8)}
+                emptyText="카테고리가 없어요."
+                renderItem={(cat) => {
+                  const count = sortedArticles.filter((a) => (a.tags || []).includes(cat)).length;
+                  return (
+                    <li key={cat} className="category-side-item">
+                      <button
+                        className={`category-side-link ${selectedCategory === cat ? 'active' : ''}`}
+                        onClick={() => setSelectedCategory(cat)}
+                      >
+                        <span className="category-name">{cat}</span>
+                        <span className="category-count">{count}</span>
+                      </button>
+                    </li>
+                  );
+                }}
+              />
+            )}
+
+            {/* 팀별 기사 수 */}
+            {teamStats.length > 0 && (
+              <SideCard
+                title="팀별 기사"
+                items={teamStats.slice(0, 6)}
+                emptyText="팀별 기사가 없어요."
+                renderItem={({ team, count }) => (
+                  <li key={team} className="team-side-item">
+                    <button
+                      className={`team-side-link ${selectedTeam === team ? 'active' : ''}`}
+                      onClick={() => setSelectedTeam(team)}
+                    >
+                      <span className="team-name-side">{team}</span>
+                      <span className="team-count">{count}</span>
+                    </button>
+                  </li>
+                )}
+              />
+            )}
           </div>
         </aside>
       </div>
@@ -685,10 +1164,12 @@ function SideCard({ title, items = [], emptyText, rightLink, onMore, renderItem 
             ? 'topic-list'
             : title === '오늘의 기록'
               ? 'record-list'
-              : 'saved-list'
+              : title === '인기 기사'
+                ? 'popular-side-list'
+                : 'saved-list'
         }
       >
-        {items.length ? items.map(renderItem) : <li className="saved-empty">{emptyText}</li>}
+        {items.length ? items.map((item, idx) => renderItem(item, idx)) : <li className="saved-empty">{emptyText}</li>}
       </ul>
     </section>
   );

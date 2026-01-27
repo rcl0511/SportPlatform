@@ -5,6 +5,7 @@ import { AuthContext } from '../contexts/AuthContext';
 import { MdEdit, MdHome, MdShare, MdSave, MdPictureAsPdf, MdClose } from 'react-icons/md';
 import jsPDF from 'jspdf';
 import '../styles/Result.css';
+import { articleAPI } from '../utils/api';
 
 const MAX_SAVED_ITEMS = 200;   // 메타 목록 최대 유지 개수
 const PREVIEW_LEN = 300;       // saved_files에 저장할 본문 미리보기 길이
@@ -215,100 +216,145 @@ const Result = () => {
   };
 
   // 저장 + 알림 생성 + 상세 페이지 이동
-  const handleSaveClick = () => {
+  const handleSaveClick = async () => {
     setIsEditing(false);
-
-    const existing = JSON.parse(localStorage.getItem('saved_files') || '[]');
-    const id = Date.now();
 
     const preview = (reportContent || '').slice(0, PREVIEW_LEN);
 
-    const newArticleMeta = {
-      id,
+    const newArticleData = {
       title: reportTitle || '제목 없음',
       content: preview,
       fullContent: reportContent,
       date: editableDate || new Date().toISOString().slice(0, 10),
-      // ✅ reporter 기본값에 getFullName 적용
       reporter: editableName || getFullName(userInfo),
       department: editableDept || '',
       email: userInfo?.email || '',
-      hasImage: Boolean(imageUrl),
+      image: imageUrl || '',
       tags: selectedTags.length ? selectedTags : ['스포츠'],
       views: 0,
+      status: 'draft', // 기본 상태: 초안
     };
 
-    // 1) 전체 본문/이미지를 article:<id>로 분리 저장
-    const fullPayload = { content: reportContent || '', image: imageUrl || '' };
-    const fullSaved = trySetItemWithEvict(
-      `article:${id}`,
-      JSON.stringify(fullPayload),
-      () => {
-        const metas = JSON.parse(localStorage.getItem('saved_files') || '[]');
-        if (metas.length > 0) {
-          const last = metas.pop();
-          localStorage.removeItem(`article:${last.id}`);
-          localStorage.setItem('saved_files', JSON.stringify(metas));
-        }
-      }
-    );
-    if (!fullSaved) {
-      alert('저장 공간이 부족합니다. 일부 오래된 기사를 삭제한 뒤 다시 시도해주세요.');
-      return;
-    }
+    try {
+      // 백엔드 API로 기사 생성
+      const savedArticle = await articleAPI.createArticle(newArticleData);
+      const id = savedArticle.id || Date.now();
 
-    // 2) 메타 목록 갱신(상한 유지)
-    const nextList = [newArticleMeta, ...existing].slice(0, MAX_SAVED_ITEMS);
-    const metaSaved = trySetItemWithEvict(
-      'saved_files',
-      JSON.stringify(nextList),
-      () => {
-        const metas = JSON.parse(localStorage.getItem('saved_files') || '[]');
-        if (metas.length > 0) {
-          const last = metas.pop();
-          localStorage.removeItem(`article:${last.id}`);
-          localStorage.setItem('saved_files', JSON.stringify(metas));
+      // localStorage 동기화 (fallback용)
+      if (!savedArticle.fromCache) {
+        const existing = JSON.parse(localStorage.getItem('saved_files') || '[]');
+        const newArticleMeta = { ...newArticleData, id };
+        const nextList = [newArticleMeta, ...existing].slice(0, MAX_SAVED_ITEMS);
+        localStorage.setItem('saved_files', JSON.stringify(nextList));
+        
+        // 전체 본문/이미지 저장
+        if (reportContent || imageUrl) {
+          localStorage.setItem(`article:${id}`, JSON.stringify({
+            content: reportContent || '',
+            image: imageUrl || '',
+          }));
         }
       }
-    );
-    if (!metaSaved) {
-      // 최후의 수단: 미리보기 더 줄여 재시도
-      newArticleMeta.content = preview.slice(0, 120);
-      const final = trySetItemWithEvict('saved_files', JSON.stringify([newArticleMeta, ...existing]), null);
-      if (!final) {
-        alert('저장 공간이 부족합니다. 불필요한 기사/이미지를 지우고 다시 시도하세요.');
-        localStorage.removeItem(`article:${id}`);
+
+      // 에디터 복귀 대비(선택)
+      localStorage.setItem('edit_subject', newArticleData.title);
+      localStorage.setItem('edit_content', reportContent || '');
+
+      // 사용자 정보(선택) 업데이트
+      const updatedUser = {
+        ...userInfo,
+        department: editableDept || userInfo?.department || '',
+      };
+      setUserInfo(updatedUser);
+      localStorage.setItem('user_info', JSON.stringify(updatedUser));
+
+      // 🔔 알림
+      const alarmList = JSON.parse(localStorage.getItem('alarm_list') || '[]');
+      const newAlarm = {
+        id: Date.now(),
+        message: `새 기사 [${newArticleData.title}] 이(가) 작성되었습니다.`,
+        time: new Date().toLocaleString(),
+        meta: { type: 'article', articleId: id },
+      };
+      localStorage.setItem('alarm_list', JSON.stringify([newAlarm, ...alarmList]));
+      localStorage.setItem('hasNewAlarm', 'true');
+      localStorage.setItem('hasNewDashboardAlert', 'true');
+
+      alert('저장되었습니다!');
+      navigate(`/platform/article/${id}`);
+    } catch (error) {
+      console.error('기사 저장 실패:', error);
+      
+      // Fallback: localStorage에 저장
+      const existing = JSON.parse(localStorage.getItem('saved_files') || '[]');
+      const id = Date.now();
+      const newArticleMeta = { ...newArticleData, id };
+
+      const fullPayload = { content: reportContent || '', image: imageUrl || '' };
+      const fullSaved = trySetItemWithEvict(
+        `article:${id}`,
+        JSON.stringify(fullPayload),
+        () => {
+          const metas = JSON.parse(localStorage.getItem('saved_files') || '[]');
+          if (metas.length > 0) {
+            const last = metas.pop();
+            localStorage.removeItem(`article:${last.id}`);
+            localStorage.setItem('saved_files', JSON.stringify(metas));
+          }
+        }
+      );
+      if (!fullSaved) {
+        alert('저장 공간이 부족합니다. 일부 오래된 기사를 삭제한 뒤 다시 시도해주세요.');
         return;
       }
+
+      const nextList = [newArticleMeta, ...existing].slice(0, MAX_SAVED_ITEMS);
+      const metaSaved = trySetItemWithEvict(
+        'saved_files',
+        JSON.stringify(nextList),
+        () => {
+          const metas = JSON.parse(localStorage.getItem('saved_files') || '[]');
+          if (metas.length > 0) {
+            const last = metas.pop();
+            localStorage.removeItem(`article:${last.id}`);
+            localStorage.setItem('saved_files', JSON.stringify(metas));
+          }
+        }
+      );
+      if (!metaSaved) {
+        newArticleMeta.content = preview.slice(0, 120);
+        const final = trySetItemWithEvict('saved_files', JSON.stringify([newArticleMeta, ...existing]), null);
+        if (!final) {
+          alert('저장 공간이 부족합니다. 불필요한 기사/이미지를 지우고 다시 시도하세요.');
+          localStorage.removeItem(`article:${id}`);
+          return;
+        }
+      }
+
+      localStorage.setItem('edit_subject', newArticleMeta.title);
+      localStorage.setItem('edit_content', reportContent || '');
+
+      const updatedUser = {
+        ...userInfo,
+        department: editableDept || userInfo?.department || '',
+      };
+      setUserInfo(updatedUser);
+      localStorage.setItem('user_info', JSON.stringify(updatedUser));
+
+      const alarmList = JSON.parse(localStorage.getItem('alarm_list') || '[]');
+      const newAlarm = {
+        id: Date.now(),
+        message: `새 기사 [${newArticleMeta.title}] 이(가) 작성되었습니다.`,
+        time: new Date().toLocaleString(),
+        meta: { type: 'article', articleId: id },
+      };
+      localStorage.setItem('alarm_list', JSON.stringify([newAlarm, ...alarmList]));
+      localStorage.setItem('hasNewAlarm', 'true');
+      localStorage.setItem('hasNewDashboardAlert', 'true');
+
+      alert('저장되었습니다! (로컬 저장)');
+      navigate(`/platform/article/${id}`);
     }
-
-    // 에디터 복귀 대비(선택)
-    localStorage.setItem('edit_subject', newArticleMeta.title);
-    localStorage.setItem('edit_content', reportContent || '');
-
-    // 사용자 정보(선택) 업데이트: 이름은 사용자가 직접 편집한 텍스트를 유지
-    const updatedUser = {
-      ...userInfo,
-      // first_name / last_name 체계가 있는 경우 건드리지 않고, 부서만 동기화
-      department: editableDept || userInfo?.department || '',
-    };
-    setUserInfo(updatedUser);
-    localStorage.setItem('user_info', JSON.stringify(updatedUser));
-
-    // 🔔 알림
-    const alarmList = JSON.parse(localStorage.getItem('alarm_list') || '[]');
-    const newAlarm = {
-      id: Date.now(),
-      message: `새 기사 [${newArticleMeta.title}] 이(가) 작성되었습니다.`,
-      time: new Date().toLocaleString(),
-      meta: { type: 'article', articleId: id },
-    };
-    localStorage.setItem('alarm_list', JSON.stringify([newAlarm, ...alarmList]));
-    localStorage.setItem('hasNewAlarm', 'true');
-    localStorage.setItem('hasNewDashboardAlert', 'true');
-
-    alert('저장되었습니다!');
-    navigate(`/platform/article/${id}`);
   };
 
   // PDF 생성 공통

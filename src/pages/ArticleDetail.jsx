@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import '../styles/ArticleDetail.css';
 import { FaHeart, FaRegCommentDots, FaShareAlt, FaTrashAlt } from 'react-icons/fa';
+import { articleAPI } from '../utils/api';
 
 export default function ArticleDetail() {
   const { id } = useParams();
@@ -29,57 +30,82 @@ export default function ArticleDetail() {
       return;
     }
 
-    const metas = JSON.parse(localStorage.getItem('saved_files') || '[]');
-    const found = metas.find((a) => a.id === numericId);
+    async function loadArticle() {
+      try {
+        // 백엔드 API에서 기사 가져오기
+        const articleData = await articleAPI.getArticle(numericId);
+        
+        // 조회수 증가 (백엔드 API 호출)
+        const viewResult = await articleAPI.incrementViews(numericId);
+        
+        // 조회수 업데이트
+        const updatedArticle = {
+          ...articleData,
+          views: viewResult.views || articleData.views || 0,
+        };
 
-    if (!found) {
-      alert('해당 기사를 찾을 수 없습니다.');
-      navigate('/platform');
-      return;
+        // fullContent 병합
+        const fullContent =
+          (articleData.fullContent || articleData.content || '');
+
+        // 이미지 병합
+        const image = articleData.image || '';
+
+        const merged = { ...updatedArticle, fullContent, image };
+
+        setArticle(merged);
+        
+        // 댓글은 아직 localStorage 사용 (백엔드 API 추가 시 변경 가능)
+        setComments(JSON.parse(localStorage.getItem(`comments_${numericId}`) || '[]'));
+
+        const user = JSON.parse(localStorage.getItem('user_info') || 'null');
+        setAuthorInput(user ? `${user.firstName || ''}${user.lastName || ''}` : '');
+      } catch (error) {
+        console.error('기사 로드 실패:', error);
+        // Fallback: localStorage에서 가져오기
+        const metas = JSON.parse(localStorage.getItem('saved_files') || '[]');
+        const found = metas.find((a) => a.id === numericId);
+
+        if (!found) {
+          alert('해당 기사를 찾을 수 없습니다.');
+          navigate('/platform');
+          return;
+        }
+
+        // 조회수 +1 (localStorage fallback)
+        const nextMeta = { ...found, views: (found.views || 0) + 1 };
+        localStorage.setItem(
+          'saved_files',
+          JSON.stringify(metas.map((a) => (a.id === nextMeta.id ? nextMeta : a)))
+        );
+
+        // article:<id> 풀텍스트/이미지 시도
+        let full = null;
+        try {
+          full = JSON.parse(localStorage.getItem(`article:${found.id}`) || 'null');
+        } catch { full = null; }
+
+        const fullContent =
+          (full && typeof full.content === 'string' && full.content)
+          ?? (typeof nextMeta.fullContent === 'string' ? nextMeta.fullContent : undefined)
+          ?? (typeof nextMeta.content === 'string' ? nextMeta.content : '');
+
+        const image =
+          (nextMeta.image !== undefined ? nextMeta.image : undefined)
+          ?? (full && typeof full.image === 'string' ? full.image : undefined)
+          ?? (nextMeta.hasImage ? nextMeta.image : undefined)
+          ?? '';
+
+        const merged = { ...nextMeta, fullContent, image };
+        setArticle(merged);
+        setComments(JSON.parse(localStorage.getItem(`comments_${nextMeta.id}`) || '[]'));
+
+        const user = JSON.parse(localStorage.getItem('user_info') || 'null');
+        setAuthorInput(user ? `${user.firstName || ''}${user.lastName || ''}` : '');
+      }
     }
 
-    // 조회수 +1 (메타 갱신)
-    const nextMeta = { ...found, views: (found.views || 0) + 1 };
-    localStorage.setItem(
-      'saved_files',
-      JSON.stringify(metas.map((a) => (a.id === nextMeta.id ? nextMeta : a)))
-    );
-
-    // article:<id> 풀텍스트/이미지 시도
-    let full = null;
-    try {
-      full = JSON.parse(localStorage.getItem(`article:${found.id}`) || 'null');
-    } catch { full = null; }
-
-    // ✅ 병합 규칙 (우선순위: article:<id>.content → meta.fullContent → meta.content)
-    const fullContent =
-      (full && typeof full.content === 'string' && full.content)
-      ?? (typeof nextMeta.fullContent === 'string' ? nextMeta.fullContent : undefined)
-      ?? (typeof nextMeta.content === 'string' ? nextMeta.content : '');
-
-    // ✅ 이미지 병합 (TS5076 피하기 위해 ?? 만 사용)
-    const image =
-      (nextMeta.image !== undefined ? nextMeta.image : undefined)
-      ?? (full && typeof full.image === 'string' ? full.image : undefined)
-      ?? (nextMeta.hasImage ? nextMeta.image : undefined)
-      ?? '';
-
-    const merged = { ...nextMeta, fullContent, image };
-
-    // 디버깅 로그(필요 시 콘솔에서 확인)
-    try {
-      console.log('[ArticleDetail] metaLen=%s, fullObj=%o, useLen=%s',
-        (nextMeta.fullContent || nextMeta.content || '').length,
-        full,
-        fullContent.length
-      );
-    } catch {}
-
-    setArticle(merged);
-    setComments(JSON.parse(localStorage.getItem(`comments_${nextMeta.id}`) || '[]'));
-
-    const user = JSON.parse(localStorage.getItem('user_info') || 'null');
-    setAuthorInput(user ? `${user.firstName || ''}${user.lastName || ''}` : '');
+    loadArticle();
   }, [id, navigate]);
 
   // 좋아요(중복 방지: 세션 기준)

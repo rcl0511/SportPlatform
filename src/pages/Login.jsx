@@ -3,7 +3,7 @@ import React, { useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../contexts/AuthContext';
 
-const API_BASE = process.env.REACT_APP_API_BASE || 'https://api.jolpai-backend.shop';
+const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:8000';
 const KAKAO_APP_KEY = process.env.REACT_APP_KAKAO_KEY || 'ae6f405402a71e2f12dc093ead8907b5';
 
 const Login = () => {
@@ -25,12 +25,15 @@ const Login = () => {
       const response = await fetch(`${API_BASE}/api/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: email, password }), // 백엔드는 username 필드를 요구함
+        body: JSON.stringify({ username: email, password }),
       });
 
       if (!response.ok) {
-        let msg = 'Login failed';
-        try { const err = await response.json(); msg = err?.message || msg; } catch {}
+        let msg = '로그인 실패';
+        try { 
+          const err = await response.json(); 
+          msg = err?.message || err?.detail || msg; 
+        } catch {}
         throw new Error(msg);
       }
 
@@ -39,12 +42,11 @@ const Login = () => {
       localStorage.setItem('user_info', JSON.stringify(data.user));
       localStorage.setItem('isLoggedIn', 'true');
 
-      // ✅ 파생 필드 보정: 다른 화면 호환
       const derived = {
-        ...data.user, // { id, email, nickname }
+        ...data.user,
         firstName: (data.user?.nickname || '').charAt(0) || '',
         lastName: (data.user?.nickname || '').slice(1) || '',
-        department: data.user?.department || '', // 서버가 주면 사용, 없으면 빈 값
+        department: data.user?.department || '',
       };
       setUserInfo(derived);
       setIsLoggedIn(true);
@@ -71,7 +73,7 @@ const Login = () => {
 
               const kakaoId = res.id?.toString() || '';
               const nickname = res.kakao_account?.profile?.nickname || '카카오유저';
-              const emailFromKakao = res.kakao_account?.email || ''; // ✅ 없으면 빈 문자열
+              const emailFromKakao = res.kakao_account?.email || '';
 
               const kakaoUser = {
                 email: emailFromKakao,
@@ -87,7 +89,10 @@ const Login = () => {
 
               if (!serverRes.ok) {
                 let msg = '서버 로그인 실패';
-                try { const err = await serverRes.json(); msg = err?.message || msg; } catch {}
+                try { 
+                  const err = await serverRes.json(); 
+                  msg = err?.message || err?.detail || msg; 
+                } catch {}
                 throw new Error(msg);
               }
 
@@ -98,9 +103,8 @@ const Login = () => {
               localStorage.setItem('user_info', JSON.stringify(data.user));
               localStorage.setItem('isLoggedIn', 'true');
 
-              // ✅ 파생 필드 보정
               const derived = {
-                ...data.user, // { id, email, nickname }
+                ...data.user,
                 firstName: (data.user?.nickname || '').charAt(0) || '',
                 lastName: (data.user?.nickname || '').slice(1) || '',
                 department: data.user?.department || '',

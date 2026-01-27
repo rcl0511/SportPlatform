@@ -8,6 +8,202 @@
   box-sizing: border-box;
 }
 
+/* 검색 바 */
+.platform-search-section{ margin-bottom:24px; }
+.search-container{ position:relative; max-width:800px; margin:0 auto; }
+.platform-search-input{
+  width:100%; padding:14px 40px 14px 16px; border:2px solid #e3eaf2; border-radius:12px;
+  font-size:15px; background:#fff; transition:border-color 0.2s, box-shadow 0.2s;
+}
+.platform-search-input:focus{ outline:none; border-color:#514EF3; box-shadow:0 0 0 4px rgba(81,78,243,0.1); }
+.search-clear-btn{
+  position:absolute; right:12px; top:50%; transform:translateY(-50%);
+  width:24px; height:24px; border:none; background:none; cursor:pointer;
+  color:#8B99AB; font-size:18px; display:flex; align-items:center; justify-content:center;
+}
+.search-clear-btn:hover{ color:#514EF3; }
+
+/* 통계 카드 */
+.platform-stats-grid{
+  display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));
+  gap:16px; margin-bottom:28px;
+}
+.stat-card{
+  background:#fff; border:1px solid #EAEEF4; border-radius:12px;
+  padding:20px; text-align:center; box-shadow:0 2px 8px rgba(0,0,0,.04);
+  transition:transform 0.2s, box-shadow 0.2s;
+}
+.stat-card:hover{ transform:translateY(-2px); box-shadow:0 4px 12px rgba(0,0,0,.08); }
+.stat-label{ font-size:13px; color:#6a87a3; font-weight:600; margin-bottom:8px; }
+.stat-value{ font-size:28px; font-weight:900; color:#0c2742; }
+
+/* 필터 섹션 */
+.platform-filters{ margin-bottom:28px; }
+.article-tabs{ display:flex; gap:8px; margin-bottom:16px; }
+.tab-btn{
+  padding:10px 20px; border:2px solid #e3eaf2; background:#fff; color:#21405e;
+  border-radius:8px; font-weight:700; font-size:14px; cursor:pointer;
+  transition:all 0.2s;
+}
+.tab-btn:hover{ border-color:#b8cbe0; background:#f8fbff; }
+.tab-btn.active{ background:#514EF3; color:#fff; border-color:#514EF3; }
+.category-filters{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
+.category-filter-btn{
+  padding:6px 14px; border:1px solid #e3eaf2; background:#fff; color:#21405e;
+  border-radius:6px; font-size:13px; font-weight:600; cursor:pointer;
+  transition:all 0.2s;
+}
+.category-filter-btn:hover{ border-color:#b8cbe0; background:#f8fbff; }
+.category-filter-btn.active{ background:#305078; color:#fff; border-color:#305078; }
+.team-filters{ display:flex; flex-wrap:wrap; gap:8px; }
+.team-filter-btn{
+  padding:6px 14px; border:1px solid #e3eaf2; background:#fff; color:#21405e;
+  border-radius:6px; font-size:13px; font-weight:600; cursor:pointer;
+  transition:all 0.2s;
+}
+.team-filter-btn:hover{ border-color:#b8cbe0; background:#f8fbff; }
+.team-filter-btn.active{ background:#667eea; color:#fff; border-color:#667eea; }
+
+/* 팀별 기사 섹션 */
+.team-articles-section{ margin-bottom:32px; }
+.section-title{ font-size:24px; font-weight:900; color:#0c2742; margin-bottom:20px; }
+.team-articles-grid{
+  display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr));
+  gap:20px;
+}
+.team-article-card{
+  background:#fff; border:1px solid #EAEEF4; border-radius:12px;
+  padding:18px; box-shadow:0 2px 8px rgba(0,0,0,.04);
+}
+.team-card-header{
+  display:flex; align-items:center; justify-content:space-between;
+  margin-bottom:14px; padding-bottom:12px; border-bottom:2px solid #f1f5fb;
+}
+.team-card-header h3{ margin:0; font-size:18px; font-weight:800; color:#0c2742; }
+.team-article-count{ font-size:13px; color:#6a87a3; font-weight:600; }
+.team-article-list{ display:grid; gap:10px; }
+.team-article-item{
+  display:block; padding:10px; background:#f8fbff; border-radius:8px;
+  text-decoration:none; color:inherit; transition:background 0.2s;
+}
+.team-article-item:hover{ background:#eef4ff; }
+.team-article-title{ font-size:14px; font-weight:700; color:#0c2742; margin-bottom:6px; }
+.team-article-meta{
+  display:flex; justify-content:space-between; font-size:12px; color:#6a87a3;
+}
+
+/* 섹션 헤더 */
+.section-header-with-tabs{
+  display:flex; align-items:center; justify-content:space-between;
+  margin-bottom:16px;
+}
+.search-result-info{
+  font-size:14px; color:#6a87a3; font-weight:600;
+}
+
+/* 사이드바 추가 스타일 */
+.popular-side-item{ border-bottom:1px dashed #EDF1F6; padding:10px 0; }
+.popular-side-item:last-child{ border-bottom:none; }
+.popular-side-link{
+  display:flex; align-items:center; gap:10px; text-decoration:none; color:inherit;
+  transition:transform 0.2s;
+}
+.popular-side-link:hover{ transform:translateX(4px); }
+.popular-rank-small{
+  width:24px; height:24px; display:flex; align-items:center; justify-content:center;
+  background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); color:#fff;
+  border-radius:6px; font-weight:800; font-size:12px; flex-shrink:0;
+}
+.popular-side-content{ flex:1; min-width:0; }
+.popular-side-title{ font-size:13px; font-weight:700; color:#0c2742; margin-bottom:4px; }
+.popular-side-meta{
+  display:flex; justify-content:space-between; font-size:11px; color:#6a87a3;
+}
+.category-side-item, .team-side-item{ border-bottom:1px dashed #EDF1F6; padding:8px 0; }
+.category-side-item:last-child, .team-side-item:last-child{ border-bottom:none; }
+.category-side-link, .team-side-link{
+  width:100%; display:flex; align-items:center; justify-content:space-between;
+  padding:6px 8px; border:none; background:none; cursor:pointer;
+  border-radius:6px; transition:background 0.2s; text-align:left;
+}
+.category-side-link:hover, .team-side-link:hover{ background:#f8fbff; }
+.category-side-link.active, .team-side-link.active{ background:#eef4ff; }
+.category-name, .team-name-side{ font-size:13px; font-weight:600; color:#0c2742; }
+.category-count, .team-count{
+  font-size:12px; padding:2px 8px; background:#e3eaf2; color:#21405e;
+  border-radius:12px; font-weight:700;
+}
+.category-side-link.active .category-count,
+.team-side-link.active .team-count{
+  background:#514EF3; color:#fff;
+}
+
+/* 네이버 기사 섹션 */
+.naver-articles-section{
+  margin-bottom:32px; background:#fff; border-radius:16px;
+  padding:24px; box-shadow:0 4px 16px rgba(0,0,0,.06);
+  border:1px solid #EAEEF4;
+}
+.section-header{ margin-bottom:20px; }
+.section-title{ font-size:24px; font-weight:900; color:#0c2742; margin:0 0 4px 0; }
+.section-subtitle{ font-size:14px; color:#6a87a3; }
+.naver-articles-grid{
+  display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr));
+  gap:20px;
+}
+.naver-article-card{
+  background:#f8fbff; border:1px solid #e6eef7; border-radius:12px;
+  overflow:hidden; transition:transform 0.2s, box-shadow 0.2s;
+}
+.naver-article-card:hover{
+  transform:translateY(-2px); box-shadow:0 8px 20px rgba(0,0,0,.1);
+}
+.naver-article-image{
+  width:100%; height:180px; overflow:hidden; background:#e9eef5;
+}
+.naver-article-image img{
+  width:100%; height:100%; object-fit:cover;
+}
+.naver-article-content{ padding:16px; }
+.naver-article-title{
+  font-size:16px; font-weight:800; color:#0c2742; margin:0 0 10px 0;
+  line-height:1.4; display:-webkit-box; -webkit-line-clamp:2;
+  -webkit-box-orient:vertical; overflow:hidden;
+}
+.naver-article-summary{
+  font-size:13px; color:#21405e; line-height:1.6; margin:0 0 12px 0;
+  display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical;
+  overflow:hidden;
+}
+.naver-article-footer{
+  display:flex; align-items:center; justify-content:space-between;
+  gap:8px; flex-wrap:wrap; padding-top:12px; border-top:1px solid #e6eef7;
+}
+.naver-article-source{
+  font-size:12px; color:#6a87a3; font-weight:600;
+}
+.naver-article-date{
+  font-size:12px; color:#8aa0b5;
+}
+.naver-article-link{
+  font-size:12px; color:#514EF3; text-decoration:none; font-weight:700;
+  transition:color 0.2s;
+}
+.naver-article-link:hover{ color:#4A47E6; text-decoration:underline; }
+.naver-loading{
+  display:flex; align-items:center; justify-content:center; gap:12px;
+  padding:24px; background:#fff; border-radius:12px; margin-bottom:24px;
+  color:#6a87a3; font-size:14px;
+}
+.loading-spinner{
+  width:20px; height:20px; border:3px solid #e6eef7;
+  border-top-color:#514EF3; border-radius:50%;
+  animation:spin 0.8s linear infinite;
+}
+@keyframes spin{
+  to{ transform:rotate(360deg); }
+}
+
 /* ===== 상단 경기 슬라이드 ===== */
 .top-schedule{ margin-bottom: 28px; }
 
@@ -268,6 +464,7 @@
 .saved-link:hover .dot{ background:#514EF3; }
 .saved-empty{ color:#8B99AB; font-size:.9rem; padding:6px 0; }
 .dot{ width:6px; height:6px; background:#B3C0D4; border-radius:50%; display:inline-block; }
+.popular-side-list{ list-style:none; padding:0; margin:0; display:grid; gap:0; }
 
 /* ===== 반응형 ===== */
 @media (max-width: 1120px){

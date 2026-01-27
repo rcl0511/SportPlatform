@@ -3,6 +3,8 @@ import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../contexts/AuthContext';
 
+const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:8000';
+
 const Register = () => {
   const { setIsLoggedIn, setUserInfo } = useContext(AuthContext);
   const [form, setForm] = useState({
@@ -35,7 +37,7 @@ const Register = () => {
     }
 
     try {
-            const response = await fetch('https://api.jolpai-backend.shop/api/register', {
+      const response = await fetch(`${API_BASE}/api/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -45,29 +47,34 @@ const Register = () => {
           phone: form.phone,
           username: form.username,
           password: form.password,
-          // department: '마케팅부', // 백엔드에서 부서가 필수일 경우 추가하세요
         }),
       });
 
       if (!response.ok) {
-        const errData = await response.json();
+        const errData = await response.json().catch(() => ({}));
         console.error('회원가입 실패 상세:', errData);
-        setError(errData.message || '회원가입 실패: 서버 오류');
+        setError(errData.message || errData.detail || '회원가입 실패: 서버 오류');
         return;
       }
 
       const data = await response.json();
       console.log('회원가입 성공:', data);
 
-      localStorage.setItem('user_info', JSON.stringify(data));
+      // 백엔드에서 토큰과 사용자 정보를 반환하는 경우
+      if (data.access_token) {
+        localStorage.setItem('token', data.access_token);
+        localStorage.setItem('user_info', JSON.stringify(data.user || data));
+      } else {
+        localStorage.setItem('user_info', JSON.stringify(data));
+      }
       localStorage.setItem('isLoggedIn', 'true');
 
-      setUserInfo(data);
+      setUserInfo(data.user || data);
       setIsLoggedIn(true);
       navigate('/');
     } catch (err) {
       console.error('회원가입 오류:', err);
-      setError('네트워크 오류로 회원가입에 실패했습니다.');
+      setError(`네트워크 오류로 회원가입에 실패했습니다: ${err.message}`);
     }
   };
 
