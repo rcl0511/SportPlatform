@@ -177,10 +177,20 @@ export default function Platform() {
             console.log("📅 백엔드 API에서 일정 로드 성공");
             return; // 성공하면 여기서 종료
           } else {
-            console.warn('⚠️ 백엔드 API 응답에 게임 데이터가 없음:', apiData);
+            console.warn('⚠️ 백엔드 API 응답에 게임 데이터가 없음:', JSON.stringify(apiData, null, 2));
             if (apiData.error) {
               console.error('   오류 상세:', apiData.error);
             }
+            if (apiData.debug) {
+              console.error('   디버깅 정보:', JSON.stringify(apiData.debug, null, 2));
+            }
+            console.error('   전체 응답 구조:', {
+              success: apiData.success,
+              games_count: apiData.games?.length || 0,
+              count: apiData.count,
+              has_error: !!apiData.error,
+              has_debug: !!apiData.debug
+            });
             // 게임 데이터가 없으면 빈 배열로 설정
             setScheduleData([]);
             setUpcomingMatches([]);
@@ -282,6 +292,7 @@ export default function Platform() {
 
         if (res.ok) {
           const data = await res.json();
+          console.log('📰 네이버 기사 API 응답:', JSON.stringify(data, null, 2));
           if (data.success && data.articles && data.articles.length > 0) {
             // 기사 요약 생성
             const articlesWithSummary = await Promise.all(
@@ -303,10 +314,15 @@ export default function Platform() {
               fromAPI: true,
             }));
           } else {
+            console.warn('⚠️ 네이버 기사 API 응답에 기사 데이터가 없음:', JSON.stringify(data, null, 2));
+            if (data.error) {
+              console.error('   오류 상세:', data.error);
+            }
             setNaverArticlesFromAPI(false);
             setNaverArticles([]);
           }
         } else {
+          console.error('❌ 네이버 기사 API 응답 실패:', res.status, res.statusText);
           setNaverArticlesFromAPI(false);
           // API 실패 시 샘플 데이터 표시 (개발용)
           const sampleArticles = [
@@ -360,7 +376,10 @@ export default function Platform() {
           }));
         }
       } catch (err) {
-        console.warn('네이버 기사 로드 실패:', err);
+        console.error('❌ 네이버 기사 API 호출 실패:', err);
+        console.error('   오류 타입:', err.name);
+        console.error('   오류 메시지:', err.message);
+        console.error('   스택:', err.stack);
         setNaverArticlesFromAPI(false);
         // 실패 시 샘플 데이터 표시
         const sampleArticles = [
@@ -1021,7 +1040,7 @@ export default function Platform() {
                     </article>
                   </Link>
                 ) : (
-                  <EmptyCard title="표시할 메인 기사가 없어요" actionText="첫 기사 만들기" to="/result" />
+                  <EmptyCard title="표시할 메인 기사가 없어요" actionText="첫 기사 만들기" to="/edit" />
                 )}
 
                 <div className="news-sub-list">

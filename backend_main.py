@@ -15,7 +15,9 @@ from passlib.context import CryptContext
 import os
 import requests
 from bs4 import BeautifulSoup
+from playwright.async_api import async_playwright
 import re
+import asyncio
 
 # JWT 설정
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
@@ -510,34 +512,50 @@ async def get_naver_baseball_articles():
 async def get_kbo_schedule():
     """
     KBO 경기 일정을 가져옵니다.
-    KBO 웹사이트에서 직접 스크래핑합니다.
+    Playwright를 사용해 JavaScript 렌더링된 페이지를 크롤링합니다.
     """
     url = "https://www.koreabaseball.com/Schedule/Schedule.aspx"
     
     try:
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-            'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
-        }
+        async with async_playwright() as p:
+            # Headless 브라우저 실행
+            browser = await p.chromium.launch(headless=True)
+            context = await browser.new_context(
+                user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                viewport={'width': 1920, 'height': 1080}
+            )
+            page = await context.new_page()
+            
+            # 페이지 로드 및 JavaScript 실행 대기
+            await page.goto(url, wait_until='networkidle', timeout=30000)
+            
+            # 경기 일정이 로드될 때까지 대기 (최대 5초)
+            try:
+                await page.wait_for_selector('table, .schedule, [class*="schedule"], [id*="schedule"]', timeout=5000)
+            except:
+                pass  # 선택자가 없어도 계속 진행
+            
+            # 렌더링된 HTML 가져오기
+            html_content = await page.content()
+            await browser.close()
         
-        response = requests.get(url, headers=headers, timeout=15)
-        response.encoding = 'utf-8'
-        
-        if response.status_code != 200:
-            return JSONResponse({
-                "success": False,
-                "games": [],
-                "error": f"KBO 웹사이트 접근 실패: {response.status_code}"
-            })
-        
-        soup = BeautifulSoup(response.text, 'html.parser')
+        soup = BeautifulSoup(html_content, 'html.parser')
         games = []
         
-        # KBO 웹사이트의 경기 일정 테이블 찾기
+        # KBO 웹사이트의 경기 일정 테이블 찾기 (여러 방법 시도)
         schedule_table = soup.find('table', {'id': 'scheduleTable'}) or \
                         soup.find('table', class_=re.compile('schedule', re.I)) or \
-                        soup.find('div', class_=re.compile('schedule', re.I))
+                        soup.find('div', class_=re.compile('schedule', re.I)) or \
+                        soup.find('div', id=re.compile('schedule', re.I)) or \
+                        soup.find('table') or \
+                        soup.find('tbody') or \
+                        soup.find('ul', class_=re.compile('schedule|game|match', re.I))
+        
+        debug_info = {
+            "html_length": len(html_content),
+            "found_table": schedule_table is not None,
+            "table_name": schedule_table.name if schedule_table else None
+        }
         
         if schedule_table:
             # 테이블이 있으면 행 찾기
@@ -605,11 +623,23 @@ async def get_kbo_schedule():
                 except Exception:
                     continue
         
-        # 데이터가 없으면 빈 배열 반환
+        # 데이터가 없으면 빈 배열 반환 (디버깅 정보 포함)
+        if not games and schedule_table:
+            if schedule_table.name == 'table':
+                rows = schedule_table.find_all('tr')
+                debug_info["rows_found"] = len(rows)
+                debug_info["parsing_attempts"] = len(rows[1:]) if len(rows) > 1 else 0
+            else:
+                rows = schedule_table.find_all(['div', 'li'], class_=re.compile('game|match|schedule', re.I))
+                debug_info["rows_found"] = len(rows)
+                debug_info["parsing_attempts"] = len(rows)
+        
         return JSONResponse({
             "success": True if games else False,
             "games": games,
-            "count": len(games)
+            "count": len(games),
+            "debug": debug_info if not games else None,
+            "error": "경기 일정을 찾을 수 없습니다. KBO 웹사이트 구조가 변경되었을 수 있습니다." if not games else None
         })
         
     except requests.exceptions.RequestException as e:
