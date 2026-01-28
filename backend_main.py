@@ -15,9 +15,14 @@ from passlib.context import CryptContext
 import os
 import requests
 from bs4 import BeautifulSoup
-from playwright.async_api import async_playwright
 import re
-import asyncio
+
+# Playwright는 선택적 의존성 (설치되어 있으면 사용)
+try:
+    from playwright.async_api import async_playwright
+    PLAYWRIGHT_AVAILABLE = True
+except ImportError:
+    PLAYWRIGHT_AVAILABLE = False
 
 # JWT 설정
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
@@ -512,33 +517,59 @@ async def get_naver_baseball_articles():
 async def get_kbo_schedule():
     """
     KBO 경기 일정을 가져옵니다.
-    Playwright를 사용해 JavaScript 렌더링된 페이지를 크롤링합니다.
+    Playwright가 있으면 사용하고, 없으면 requests로 시도합니다.
     """
     url = "https://www.koreabaseball.com/Schedule/Schedule.aspx"
+    html_content = None
+    
+    # Playwright 사용 시도
+    if PLAYWRIGHT_AVAILABLE:
+        try:
+            async with async_playwright() as p:
+                browser = await p.chromium.launch(headless=True)
+                context = await browser.new_context(
+                    user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    viewport={'width': 1920, 'height': 1080}
+                )
+                page = await context.new_page()
+                await page.goto(url, wait_until='networkidle', timeout=30000)
+                try:
+                    await page.wait_for_selector('table, .schedule, [class*="schedule"], [id*="schedule"]', timeout=5000)
+                except:
+                    pass
+                html_content = await page.content()
+                await browser.close()
+        except Exception as e:
+            # Playwright 실패 시 requests로 fallback
+            pass
+    
+    # Playwright가 없거나 실패한 경우 requests 사용
+    if not html_content:
+        try:
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
+            }
+            response = requests.get(url, headers=headers, timeout=15)
+            response.encoding = 'utf-8'
+            if response.status_code == 200:
+                html_content = response.text
+        except Exception as e:
+            return JSONResponse({
+                "success": False,
+                "games": [],
+                "error": f"웹사이트 접근 실패: {str(e)}"
+            })
+    
+    if not html_content:
+        return JSONResponse({
+            "success": False,
+            "games": [],
+            "error": "HTML 콘텐츠를 가져올 수 없습니다."
+        })
     
     try:
-        async with async_playwright() as p:
-            # Headless 브라우저 실행
-            browser = await p.chromium.launch(headless=True)
-            context = await browser.new_context(
-                user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                viewport={'width': 1920, 'height': 1080}
-            )
-            page = await context.new_page()
-            
-            # 페이지 로드 및 JavaScript 실행 대기
-            await page.goto(url, wait_until='networkidle', timeout=30000)
-            
-            # 경기 일정이 로드될 때까지 대기 (최대 5초)
-            try:
-                await page.wait_for_selector('table, .schedule, [class*="schedule"], [id*="schedule"]', timeout=5000)
-            except:
-                pass  # 선택자가 없어도 계속 진행
-            
-            # 렌더링된 HTML 가져오기
-            html_content = await page.content()
-            await browser.close()
-        
         soup = BeautifulSoup(html_content, 'html.parser')
         games = []
         

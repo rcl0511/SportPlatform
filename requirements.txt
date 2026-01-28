@@ -9,4 +9,3 @@ PyJWT==2.9.0
 bcrypt==4.2.0
 requests==2.31.0
 beautifulsoup4==4.12.3
-playwright==1.40.0
