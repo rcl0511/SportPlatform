@@ -98,7 +98,6 @@ export default function Platform() {
   const [selectedTeam, setSelectedTeam] = useState('all');
   const [naverArticles, setNaverArticles] = useState([]);
   const [loadingNaver, setLoadingNaver] = useState(false);
-  const [naverArticlesFromAPI, setNaverArticlesFromAPI] = useState(false);
 
   // 날짜 헬퍼
   const today = new Date().toISOString().split('T')[0];
@@ -179,22 +178,24 @@ export default function Platform() {
           } else {
             console.warn('⚠️ 백엔드 API 응답에 게임 데이터가 없음:', JSON.stringify(apiData, null, 2));
             if (apiData.error) {
-              console.error('   오류 상세:', apiData.error);
+              console.error('   ❌ 오류:', apiData.error);
             }
             if (apiData.debug) {
-              console.error('   디버깅 정보:', JSON.stringify(apiData.debug, null, 2));
+              console.error('   🔍 디버깅 정보:', JSON.stringify(apiData.debug, null, 2));
+              console.error('   - HTML 길이:', apiData.debug.html_length);
+              console.error('   - 테이블 찾음:', apiData.debug.found_table);
+              console.error('   - 테이블 이름:', apiData.debug.table_name);
+              if (apiData.debug.rows_found !== undefined) {
+                console.error('   - 찾은 행 수:', apiData.debug.rows_found);
+              }
             }
-            console.error('   전체 응답 구조:', {
+            console.error('   📊 응답 구조:', {
               success: apiData.success,
               games_count: apiData.games?.length || 0,
               count: apiData.count,
               has_error: !!apiData.error,
               has_debug: !!apiData.debug
             });
-            // 게임 데이터가 없으면 빈 배열로 설정
-            setScheduleData([]);
-            setUpcomingMatches([]);
-            setRecentMatches([]);
           }
         } else {
           console.warn(`⚠️ 백엔드 API 응답 실패: ${apiRes.status} ${apiRes.statusText}`);
@@ -202,16 +203,12 @@ export default function Platform() {
           if (apiRes.status === 404) {
             console.error('❌ 백엔드에 /api/kbo-schedule 엔드포인트가 없습니다. 백엔드 코드를 확인하세요.');
           }
-          // 실패하면 빈 배열로 설정
-          setScheduleData([]);
-          setUpcomingMatches([]);
-          setRecentMatches([]);
         }
       } catch (apiErr) {
         console.error('❌ 백엔드 API 호출 실패:', apiErr);
         console.error('   API 주소:', `${API_BASE}/api/kbo-schedule`);
         console.error('   오류 상세:', apiErr.message);
-        // 예외 발생 시 빈 배열로 설정
+        // 실패 시 빈 배열로 설정
         setScheduleData([]);
         setUpcomingMatches([]);
         setRecentMatches([]);
@@ -275,7 +272,6 @@ export default function Platform() {
           const cacheDate = cachedData.date;
           if (cacheDate === today && cachedData.articles && cachedData.articles.length > 0) {
             setNaverArticles(cachedData.articles);
-            setNaverArticlesFromAPI(!!cachedData.fromAPI);
             return;
           }
         }
@@ -292,7 +288,6 @@ export default function Platform() {
 
         if (res.ok) {
           const data = await res.json();
-          console.log('📰 네이버 기사 API 응답:', JSON.stringify(data, null, 2));
           if (data.success && data.articles && data.articles.length > 0) {
             // 기사 요약 생성
             const articlesWithSummary = await Promise.all(
@@ -306,24 +301,13 @@ export default function Platform() {
             );
             
             setNaverArticles(articlesWithSummary);
-            setNaverArticlesFromAPI(true);
             // 캐시 저장
             localStorage.setItem(cacheKey, JSON.stringify({
               date: today,
               articles: articlesWithSummary,
-              fromAPI: true,
             }));
-          } else {
-            console.warn('⚠️ 네이버 기사 API 응답에 기사 데이터가 없음:', JSON.stringify(data, null, 2));
-            if (data.error) {
-              console.error('   오류 상세:', data.error);
-            }
-            setNaverArticlesFromAPI(false);
-            setNaverArticles([]);
           }
         } else {
-          console.error('❌ 네이버 기사 API 응답 실패:', res.status, res.statusText);
-          setNaverArticlesFromAPI(false);
           // API 실패 시 샘플 데이터 표시 (개발용)
           const sampleArticles = [
             {
@@ -368,19 +352,13 @@ export default function Platform() {
             },
           ];
           setNaverArticles(sampleArticles);
-          setNaverArticlesFromAPI(false);
           localStorage.setItem(cacheKey, JSON.stringify({
             date: today,
             articles: sampleArticles,
-            fromAPI: false,
           }));
         }
       } catch (err) {
-        console.error('❌ 네이버 기사 API 호출 실패:', err);
-        console.error('   오류 타입:', err.name);
-        console.error('   오류 메시지:', err.message);
-        console.error('   스택:', err.stack);
-        setNaverArticlesFromAPI(false);
+        console.warn('네이버 기사 로드 실패:', err);
         // 실패 시 샘플 데이터 표시
         const sampleArticles = [
           {
@@ -408,10 +386,6 @@ export default function Platform() {
 
     loadNaverArticles();
   }, []);
-
-  const naverSectionSubtitle = naverArticlesFromAPI
-    ? '매일 업데이트되는 최신 야구 기사'
-    : '매일 업데이트되는 최신 야구 기사 (연결 실패 시 예시)';
 
   // 기사 요약 생성 함수
   async function generateSummary(title) {
@@ -791,7 +765,7 @@ export default function Platform() {
         <div className="naver-articles-section">
           <div className="section-header">
             <h2 className="section-title">네이버 스포츠 야구 뉴스</h2>
-            <span className="section-subtitle">{naverSectionSubtitle}</span>
+            <span className="section-subtitle">매일 업데이트되는 최신 야구 기사</span>
           </div>
           <div className="naver-articles-grid">
             {naverArticles.map((article, idx) => (
@@ -1040,7 +1014,7 @@ export default function Platform() {
                     </article>
                   </Link>
                 ) : (
-                  <EmptyCard title="표시할 메인 기사가 없어요" actionText="첫 기사 만들기" to="/edit" />
+                  <EmptyCard title="표시할 메인 기사가 없어요" actionText="첫 기사 만들기" to="/result" />
                 )}
 
                 <div className="news-sub-list">

@@ -40,7 +40,8 @@ app = FastAPI(title="Sports Platform API")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:3000",  # 로컬 개발
+        "http://localhost:3000",  # 로컬 개발 (CRA 기본 포트)
+        "http://localhost:3001",  # 로컬 개발 (현재 사용 중인 포트)
         "https://sportsnewsai.netlify.app",  # Netlify 배포 주소
     ],
     allow_credentials=True,
@@ -439,49 +440,142 @@ async def get_naver_baseball_articles():
     https://m.sports.naver.com/kbaseball/news
     """
     url = "https://m.sports.naver.com/kbaseball/news"
-    try:
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
-        }
-        response = requests.get(url, headers=headers, timeout=15)
-        response.encoding = "utf-8"
-        if response.status_code != 200:
+    html_content = None
+    
+    # Playwright 사용 시도 (JavaScript 렌더링 필요)
+    if PLAYWRIGHT_AVAILABLE:
+        try:
+            async with async_playwright() as p:
+                browser = await p.chromium.launch(headless=True)
+                context = await browser.new_context(
+                    user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    viewport={'width': 1920, 'height': 1080}
+                )
+                page = await context.new_page()
+                await page.goto(url, wait_until='networkidle', timeout=30000)
+                # 기사 목록이 로드될 때까지 대기
+                try:
+                    await page.wait_for_selector('a[href*="sports.news"], a[href*="news.naver"], .news_item, .article_item', timeout=5000)
+                except:
+                    pass
+                html_content = await page.content()
+                await browser.close()
+        except Exception as e:
+            # Playwright 실패 시 requests로 fallback
+            pass
+    
+    # Playwright가 없거나 실패한 경우 requests 사용
+    if not html_content:
+        try:
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
+            }
+            response = requests.get(url, headers=headers, timeout=15)
+            response.encoding = "utf-8"
+            if response.status_code == 200:
+                html_content = response.text
+        except Exception as e:
             return JSONResponse({
                 "success": False,
                 "articles": [],
-                "error": f"네이버 스포츠 접근 실패: {response.status_code}",
+                "error": f"네이버 스포츠 접근 실패: {str(e)}",
             })
-        soup = BeautifulSoup(response.text, "html.parser")
+    
+    if not html_content:
+        return JSONResponse({
+            "success": False,
+            "articles": [],
+            "error": "HTML 콘텐츠를 가져올 수 없습니다.",
+        })
+    
+    try:
+        soup = BeautifulSoup(html_content, "html.parser")
         articles = []
-        # 뉴스 목록 링크 수집 (a 태그 중 기사 링크 패턴)
+        
+        # 여러 방법으로 기사 찾기
+        # 방법 1: 기사 링크가 있는 a 태그 찾기
         for a in soup.find_all("a", href=True):
             href = a.get("href", "")
-            # 네이버 스포츠 기사 URL 패턴 (news.naver.com, sports.news 등)
-            if "sports.news" in href or "news.naver" in href or "/kbaseball/news/" in href:
+            # 네이버 스포츠 기사 URL 패턴
+            if "sports.news" in href or "news.naver" in href or "/kbaseball/news/" in href or "sports.naver.com/news" in href:
                 if href.startswith("//"):
                     href = "https:" + href
                 elif href.startswith("/"):
                     href = "https://m.sports.naver.com" + href
-                title_el = a.find(class_=re.compile("title|headline|tit|text", re.I)) or a
-                title = (title_el.get_text(strip=True) if title_el else "").strip()
+                
+                # 제목 추출 (여러 방법 시도)
+                title = ""
+                title_el = a.find(class_=re.compile("title|headline|tit|text|subject", re.I))
+                if title_el:
+                    title = title_el.get_text(strip=True)
+                else:
+                    # 직접 텍스트 추출
+                    title = a.get_text(strip=True)
+                
                 if not title or len(title) < 5:
                     continue
+                
+                # 이미지 추출
                 img = a.find("img")
-                image = (img.get("src") or img.get("data-src") or "") if img else ""
+                image = ""
+                if img:
+                    image = img.get("src") or img.get("data-src") or img.get("data-lazy-src") or ""
                 if image and not image.startswith("http"):
                     image = "https:" + image if image.startswith("//") else "https://m.sports.naver.com" + image
-                date_el = a.find(class_=re.compile("date|time|info", re.I))
+                
+                # 날짜 추출
+                date_el = a.find(class_=re.compile("date|time|info|date_time", re.I))
                 date_text = date_el.get_text(strip=True) if date_el else ""
-                if title and len(title) > 4:
-                    articles.append({
-                        "title": title[:200],
-                        "link": href,
-                        "image": image or "",
-                        "date": date_text or "",
-                        "source": "네이버 스포츠",
-                    })
+                
+                articles.append({
+                    "title": title[:200],
+                    "link": href,
+                    "image": image or "",
+                    "date": date_text or "",
+                    "source": "네이버 스포츠",
+                })
+        
+        # 방법 2: 기사 리스트 아이템 찾기
+        news_items = soup.find_all(class_=re.compile("news_item|article_item|list_item|news_list", re.I))
+        for item in news_items:
+            link_elem = item.find("a", href=True)
+            if not link_elem:
+                continue
+            
+            href = link_elem.get("href", "")
+            if not href or ("sports.news" not in href and "news.naver" not in href):
+                continue
+            
+            if href.startswith("//"):
+                href = "https:" + href
+            elif href.startswith("/"):
+                href = "https://m.sports.naver.com" + href
+            
+            title_elem = item.find(class_=re.compile("title|headline|tit|subject", re.I))
+            title = title_elem.get_text(strip=True) if title_elem else link_elem.get_text(strip=True)
+            
+            if not title or len(title) < 5:
+                continue
+            
+            img_elem = item.find("img")
+            image = ""
+            if img_elem:
+                image = img_elem.get("src") or img_elem.get("data-src") or img_elem.get("data-lazy-src") or ""
+            if image and not image.startswith("http"):
+                image = "https:" + image if image.startswith("//") else "https://m.sports.naver.com" + image
+            
+            date_elem = item.find(class_=re.compile("date|time|info", re.I))
+            date_text = date_elem.get_text(strip=True) if date_elem else ""
+            
+            articles.append({
+                "title": title[:200],
+                "link": href,
+                "image": image or "",
+                "date": date_text or "",
+                "source": "네이버 스포츠",
+            })
         # 제목 기준 중복 제거, 최대 10개
         seen = set()
         unique = []
@@ -490,11 +584,23 @@ async def get_naver_baseball_articles():
             if key not in seen and len(unique) < 10:
                 seen.add(key)
                 unique.append(art)
+        
+        # 디버깅 정보
+        debug_info = {
+            "html_length": len(html_content),
+            "total_links_found": len(soup.find_all("a", href=True)),
+            "articles_found": len(articles),
+            "unique_articles": len(unique),
+            "playwright_used": PLAYWRIGHT_AVAILABLE and html_content is not None
+        }
+        
         return JSONResponse({
-            "success": True,
+            "success": True if unique else False,
             "articles": unique,
             "count": len(unique),
             "date": datetime.now().strftime("%Y-%m-%d"),
+            "debug": debug_info if not unique else None,
+            "error": "기사를 찾을 수 없습니다. 네이버 스포츠 페이지 구조가 변경되었을 수 있습니다." if not unique else None
         })
     except requests.exceptions.RequestException as e:
         return JSONResponse({
@@ -655,15 +761,32 @@ async def get_kbo_schedule():
                     continue
         
         # 데이터가 없으면 빈 배열 반환 (디버깅 정보 포함)
-        if not games and schedule_table:
-            if schedule_table.name == 'table':
-                rows = schedule_table.find_all('tr')
-                debug_info["rows_found"] = len(rows)
-                debug_info["parsing_attempts"] = len(rows[1:]) if len(rows) > 1 else 0
+        if not games:
+            if schedule_table:
+                if schedule_table.name == 'table':
+                    rows = schedule_table.find_all('tr')
+                    debug_info["rows_found"] = len(rows)
+                    debug_info["parsing_attempts"] = len(rows[1:]) if len(rows) > 1 else 0
+                    # 첫 번째 행 샘플 확인
+                    if len(rows) > 1:
+                        first_row_cells = rows[1].find_all(['td', 'th'])
+                        debug_info["first_row_cells"] = len(first_row_cells)
+                        debug_info["first_row_text"] = rows[1].get_text(strip=True)[:100] if rows[1] else None
+                else:
+                    rows = schedule_table.find_all(['div', 'li'], class_=re.compile('game|match|schedule', re.I))
+                    debug_info["rows_found"] = len(rows)
+                    debug_info["parsing_attempts"] = len(rows)
             else:
-                rows = schedule_table.find_all(['div', 'li'], class_=re.compile('game|match|schedule', re.I))
-                debug_info["rows_found"] = len(rows)
-                debug_info["parsing_attempts"] = len(rows)
+                debug_info["rows_found"] = 0
+                debug_info["parsing_attempts"] = 0
+                # HTML 샘플 확인 (처음 500자)
+                debug_info["html_sample"] = html_content[:500] if html_content else None
+                # 테이블 태그가 있는지 확인
+                all_tables = soup.find_all('table')
+                debug_info["total_tables_found"] = len(all_tables)
+                if all_tables:
+                    debug_info["first_table_id"] = all_tables[0].get('id', 'no-id')
+                    debug_info["first_table_class"] = all_tables[0].get('class', [])
         
         return JSONResponse({
             "success": True if games else False,

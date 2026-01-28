@@ -164,42 +164,23 @@ const Dashboard = () => {
             return; // 성공하면 여기서 종료
           } else {
             // 백엔드 API는 성공했지만 게임 데이터가 없는 경우
-            console.warn('⚠️ 백엔드 API 응답에 게임 데이터가 없음:', JSON.stringify(apiData, null, 2));
+            console.warn('백엔드 API 응답에 게임 데이터가 없음:', apiData);
             if (apiData.error) {
               console.error('   오류 상세:', apiData.error);
             }
-            if (apiData.debug) {
-              console.error('   디버깅 정보:', JSON.stringify(apiData.debug, null, 2));
-            }
-            console.error('   전체 응답 구조:', {
-              success: apiData.success,
-              games_count: apiData.games?.length || 0,
-              count: apiData.count,
-              has_error: !!apiData.error,
-              has_debug: !!apiData.debug
-            });
             setKboSchedule([]);
             setTodayGames([]);
             setLiveGames([]);
           }
         } else {
           // 백엔드 API 응답 실패
-          console.error(`❌ 백엔드 API 응답 실패: ${apiRes.status} ${apiRes.statusText}`);
-          try {
-            const errorData = await apiRes.json();
-            console.error('   오류 응답:', JSON.stringify(errorData, null, 2));
-          } catch {
-            const errorText = await apiRes.text();
-            console.error('   오류 텍스트:', errorText);
-          }
+          console.warn(`백엔드 API 응답 실패: ${apiRes.status} ${apiRes.statusText}`);
           setKboSchedule([]);
           setTodayGames([]);
           setLiveGames([]);
         }
       } catch (apiErr) {
-        console.error('❌ 백엔드 API 호출 실패:', apiErr);
-        console.error('   오류 타입:', apiErr.name);
-        console.error('   오류 메시지:', apiErr.message);
+        console.warn('백엔드 API 호출 실패:', apiErr);
         setKboSchedule([]);
         setTodayGames([]);
         setLiveGames([]);
