@@ -422,6 +422,87 @@ async def health():
     return {"status": "healthy"}
 
 # ============================================
+# 네이버 스포츠 야구 뉴스 API
+# ============================================
+
+@app.get("/api/naver-baseball-articles")
+async def get_naver_baseball_articles():
+    """
+    네이버 스포츠 야구 뉴스 페이지에서 최신 기사를 가져옵니다.
+    https://m.sports.naver.com/kbaseball/news
+    """
+    url = "https://m.sports.naver.com/kbaseball/news"
+    try:
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
+        }
+        response = requests.get(url, headers=headers, timeout=15)
+        response.encoding = "utf-8"
+        if response.status_code != 200:
+            return JSONResponse({
+                "success": False,
+                "articles": [],
+                "error": f"네이버 스포츠 접근 실패: {response.status_code}",
+            })
+        soup = BeautifulSoup(response.text, "html.parser")
+        articles = []
+        # 뉴스 목록 링크 수집 (a 태그 중 기사 링크 패턴)
+        for a in soup.find_all("a", href=True):
+            href = a.get("href", "")
+            # 네이버 스포츠 기사 URL 패턴 (news.naver.com, sports.news 등)
+            if "sports.news" in href or "news.naver" in href or "/kbaseball/news/" in href:
+                if href.startswith("//"):
+                    href = "https:" + href
+                elif href.startswith("/"):
+                    href = "https://m.sports.naver.com" + href
+                title_el = a.find(class_=re.compile("title|headline|tit|text", re.I)) or a
+                title = (title_el.get_text(strip=True) if title_el else "").strip()
+                if not title or len(title) < 5:
+                    continue
+                img = a.find("img")
+                image = (img.get("src") or img.get("data-src") or "") if img else ""
+                if image and not image.startswith("http"):
+                    image = "https:" + image if image.startswith("//") else "https://m.sports.naver.com" + image
+                date_el = a.find(class_=re.compile("date|time|info", re.I))
+                date_text = date_el.get_text(strip=True) if date_el else ""
+                if title and len(title) > 4:
+                    articles.append({
+                        "title": title[:200],
+                        "link": href,
+                        "image": image or "",
+                        "date": date_text or "",
+                        "source": "네이버 스포츠",
+                    })
+        # 제목 기준 중복 제거, 최대 10개
+        seen = set()
+        unique = []
+        for art in articles:
+            key = art["title"][:80]
+            if key not in seen and len(unique) < 10:
+                seen.add(key)
+                unique.append(art)
+        return JSONResponse({
+            "success": True,
+            "articles": unique,
+            "count": len(unique),
+            "date": datetime.now().strftime("%Y-%m-%d"),
+        })
+    except requests.exceptions.RequestException as e:
+        return JSONResponse({
+            "success": False,
+            "articles": [],
+            "error": f"네트워크 오류: {str(e)}",
+        })
+    except Exception as e:
+        return JSONResponse({
+            "success": False,
+            "articles": [],
+            "error": f"스크래핑 오류: {str(e)}",
+        })
+
+# ============================================
 # KBO 일정 API
 # ============================================
 
@@ -429,58 +510,119 @@ async def health():
 async def get_kbo_schedule():
     """
     KBO 경기 일정을 가져옵니다.
-    S3 또는 KBO 웹사이트에서 데이터를 가져옵니다.
+    KBO 웹사이트에서 직접 스크래핑합니다.
     """
+    url = "https://www.koreabaseball.com/Schedule/Schedule.aspx"
+    
     try:
-        # S3에서 데이터 가져오기 시도
-        s3_url = "https://kbo-schedule-data.s3.ap-northeast-2.amazonaws.com/kbo_schedule.json"
-        s3_response = requests.get(s3_url, timeout=10)
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
+        }
         
-        if s3_response.status_code == 200:
-            s3_data = s3_response.json()
-            games = s3_data.get("games", [])
-            
-            # 데이터 정규화
-            normalized = []
-            for i, g in enumerate(games):
-                # 날짜 파싱
-                date_str = g.get("date", "")
-                date_match = re.match(r"(\d{2})\.(\d{2})", date_str)
-                if date_match:
-                    month, day = int(date_match.group(1)), int(date_match.group(2))
-                    date_obj = datetime(2025, month, day)
-                else:
-                    continue
-                
-                # HTML 태그 제거
-                def strip_tags(html):
-                    if not html:
-                        return ""
-                    return re.sub(r"</?[^>]+(>|$)", "", str(html)).replace("vs", " vs ").strip()
-                
-                normalized.append({
-                    "id": i,
-                    "date": date_obj.isoformat(),
-                    "dateText": date_str,
-                    "timeText": strip_tags(g.get("time", "")),
-                    "playText": strip_tags(g.get("play", "")),
-                    "stadium": g.get("stadium", ""),
-                    "home": "",
-                    "away": "",
-                })
-            
+        response = requests.get(url, headers=headers, timeout=15)
+        response.encoding = 'utf-8'
+        
+        if response.status_code != 200:
             return JSONResponse({
-                "success": True,
-                "games": normalized
+                "success": False,
+                "games": [],
+                "error": f"KBO 웹사이트 접근 실패: {response.status_code}"
             })
-        else:
-            raise HTTPException(status_code=500, detail="S3 데이터 로드 실패")
-    except Exception as e:
-        # 실패 시 빈 배열 반환
+        
+        soup = BeautifulSoup(response.text, 'html.parser')
+        games = []
+        
+        # KBO 웹사이트의 경기 일정 테이블 찾기
+        schedule_table = soup.find('table', {'id': 'scheduleTable'}) or \
+                        soup.find('table', class_=re.compile('schedule', re.I)) or \
+                        soup.find('div', class_=re.compile('schedule', re.I))
+        
+        if schedule_table:
+            # 테이블이 있으면 행 찾기
+            if schedule_table.name == 'table':
+                rows = schedule_table.find_all('tr')
+            else:
+                # div인 경우 경기 항목 찾기
+                rows = schedule_table.find_all(['div', 'li'], class_=re.compile('game|match|schedule', re.I))
+            
+            for row in rows[1:] if schedule_table.name == 'table' else rows:  # 헤더 제외
+                try:
+                    if schedule_table.name == 'table':
+                        cells = row.find_all(['td', 'th'])
+                        if len(cells) < 2:
+                            continue
+                        
+                        date_text = cells[0].get_text(strip=True) if len(cells) > 0 else ''
+                        time_text = cells[1].get_text(strip=True) if len(cells) > 1 else ''
+                        game_text = cells[2].get_text(strip=True) if len(cells) > 2 else ''
+                        stadium_text = cells[-1].get_text(strip=True) if len(cells) > 3 else ''
+                    else:
+                        # div 구조인 경우
+                        date_text = row.find(class_=re.compile('date', re.I))
+                        date_text = date_text.get_text(strip=True) if date_text else ''
+                        time_text = row.find(class_=re.compile('time', re.I))
+                        time_text = time_text.get_text(strip=True) if time_text else ''
+                        game_text = row.find(class_=re.compile('game|match|vs', re.I))
+                        game_text = game_text.get_text(strip=True) if game_text else ''
+                        stadium_text = row.find(class_=re.compile('stadium|venue', re.I))
+                        stadium_text = stadium_text.get_text(strip=True) if stadium_text else ''
+                    
+                    # 날짜 파싱 (예: "01.27(월)" 또는 "2025.01.27")
+                    date_match = re.search(r'(\d{2,4})\.(\d{2})\.?(\d{2})?', date_text)
+                    if date_match:
+                        if date_match.group(3):  # YYYY.MM.DD 형식
+                            year = int(date_match.group(1))
+                            month = int(date_match.group(2))
+                            day = int(date_match.group(3))
+                        else:  # MM.DD 형식
+                            year = datetime.now().year
+                            month = int(date_match.group(1))
+                            day = int(date_match.group(2))
+                        
+                        try:
+                            date_obj = datetime(year, month, day)
+                            
+                            # 경기 팀 추출
+                            teams_match = re.search(r'([가-힣A-Z\s]+)\s*(?:vs|VS|대)\s*([가-힣A-Z\s]+)', game_text)
+                            home = teams_match.group(1).strip() if teams_match else ''
+                            away = teams_match.group(2).strip() if teams_match else ''
+                            
+                            games.append({
+                                "date": date_obj.strftime("%Y-%m-%d"),
+                                "dateText": date_text,
+                                "time": time_text,
+                                "timeText": time_text,
+                                "play": game_text,
+                                "playText": game_text,
+                                "stadium": stadium_text,
+                                "home": home,
+                                "away": away
+                            })
+                        except ValueError:
+                            continue
+                except Exception:
+                    continue
+        
+        # 데이터가 없으면 빈 배열 반환
+        return JSONResponse({
+            "success": True if games else False,
+            "games": games,
+            "count": len(games)
+        })
+        
+    except requests.exceptions.RequestException as e:
         return JSONResponse({
             "success": False,
             "games": [],
-            "error": str(e)
+            "error": f"네트워크 오류: {str(e)}"
+        })
+    except Exception as e:
+        return JSONResponse({
+            "success": False,
+            "games": [],
+            "error": f"스크래핑 오류: {str(e)}"
         })
 
 if __name__ == "__main__":

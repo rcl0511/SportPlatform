@@ -136,12 +136,17 @@ const Dashboard = () => {
             });
             
             // 샘플 데이터 제거하고 실제 데이터로 교체
-            setTodayGames((prev) => {
-              const realGames = prev.filter((g) => !g.id?.startsWith('sample-'));
-              const existingIds = new Set(realGames.map((g) => g.id));
-              const newGames = todayMatches.filter((g) => !existingIds.has(g.id));
-              return [...realGames, ...newGames];
-            });
+            if (todayMatches.length > 0) {
+              setTodayGames((prev) => {
+                const realGames = prev.filter((g) => !g.id?.startsWith('sample-'));
+                const existingIds = new Set(realGames.map((g) => g.id));
+                const newGames = todayMatches.filter((g) => !existingIds.has(g.id));
+                return [...realGames, ...newGames];
+              });
+            } else {
+              // 오늘 경기가 없으면 샘플 데이터도 제거
+              setTodayGames([]);
+            }
             
             // 진행 중인 경기
             const now = new Date();
@@ -157,81 +162,32 @@ const Dashboard = () => {
             setLiveGames(live);
             
             return; // 성공하면 여기서 종료
+          } else {
+            // 백엔드 API는 성공했지만 게임 데이터가 없는 경우
+            console.warn('백엔드 API 응답에 게임 데이터가 없음:', apiData);
+            if (apiData.error) {
+              console.error('   오류 상세:', apiData.error);
+            }
+            setKboSchedule([]);
+            setTodayGames([]);
+            setLiveGames([]);
           }
+        } else {
+          // 백엔드 API 응답 실패
+          console.warn(`백엔드 API 응답 실패: ${apiRes.status} ${apiRes.statusText}`);
+          setKboSchedule([]);
+          setTodayGames([]);
+          setLiveGames([]);
         }
       } catch (apiErr) {
-        console.warn('백엔드 API 호출 실패, S3 시도:', apiErr);
+        console.warn('백엔드 API 호출 실패:', apiErr);
+        setKboSchedule([]);
+        setTodayGames([]);
+        setLiveGames([]);
       }
       
-      // 2순위: S3에서 기존 데이터 로드
+      // 최종 fallback: localStorage의 recentGames에서 오늘 경기 추출
       try {
-        const res = await fetch(
-          "https://kbo-schedule-data.s3.ap-northeast-2.amazonaws.com/kbo_schedule.json"
-        );
-        if (!res.ok) throw new Error('Network response was not ok');
-        const json = await res.json();
-        const games = json.games || [];
-
-        const stripTags = (html) => {
-          return html
-            ?.replace(/<\/?[^>]+(>|$)/g, "")
-            .replace(/vs/g, " vs ")
-            .replace(/\s+/g, " ")
-            .trim();
-        };
-
-        const parseDate = (str) => {
-          if (!str) return null;
-          const m = str.match(/(\d{2})\.(\d{2})/);
-          if (!m) return null;
-          return new Date(2025, parseInt(m[1]) - 1, parseInt(m[2]));
-        };
-
-        const normalized = games
-          .map((g, i) => ({
-            id: i,
-            dateText: g.date || "",
-            timeText: stripTags(g.time || ""),
-            playText: stripTags(g.play || ""),
-            stadium: g.stadium,
-            dateObj: parseDate(g.date),
-          }))
-          .filter((g) => g.dateObj);
-
-        setKboSchedule(normalized);
-
-        // 오늘 경기 필터링
-        const today = new Date();
-        const todayStr = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
-        const toKey = (d) => `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
-        
-        const todayMatches = normalized.filter((g) => {
-          const key = toKey(g.dateObj);
-          return key === todayStr;
-        });
-
-        // 샘플 데이터 제거하고 실제 데이터로 교체
-        setTodayGames((prev) => {
-          const realGames = prev.filter((g) => !g.id?.startsWith('sample-'));
-          const existingIds = new Set(realGames.map((g) => g.id));
-          const newGames = todayMatches.filter((g) => !existingIds.has(g.id));
-          return [...realGames, ...newGames];
-        });
-
-        // 진행 중인 경기 (시간 기준으로 추정)
-        const now = new Date();
-        const live = todayMatches.filter((g) => {
-          const timeMatch = g.timeText.match(/(\d{2}):(\d{2})/);
-          if (!timeMatch) return false;
-          const gameTime = new Date(g.dateObj);
-          gameTime.setHours(parseInt(timeMatch[1]), parseInt(timeMatch[2]), 0, 0);
-          const gameEnd = new Date(gameTime);
-          gameEnd.setHours(gameEnd.getHours() + 3); // 경기 시간 약 3시간 가정
-          return now >= gameTime && now <= gameEnd;
-        });
-        setLiveGames(live);
-      } catch (err) {
-        console.warn('KBO 일정 로드 실패, localStorage 데이터 사용:', err);
         // localStorage의 recentGames에서 오늘 경기 추출
         const storedGames = JSON.parse(localStorage.getItem('recentGames') || '[]');
         const today = new Date().toISOString().slice(0, 10);
@@ -257,7 +213,12 @@ const Dashboard = () => {
             const newGames = todayFromStorage.filter((g) => !existingIds.has(g.id));
             return [...realGames, ...newGames];
           });
+        } else {
+          // 실제 데이터가 없으면 샘플 데이터도 제거
+          setTodayGames([]);
         }
+      } catch (err) {
+        // localStorage 읽기 실패 시 무시
       }
     }
 
@@ -277,7 +238,22 @@ const Dashboard = () => {
           }
           return a;
         });
-        setReports(normalized);
+        const withDates = normalized.map((r) => ({
+          ...r,
+          date: r.date
+            ? r.date
+            : (r.createdAt || r.timestamp)
+            ? new Date(r.createdAt || r.timestamp).toISOString().slice(0, 10)
+            : new Date().toISOString().slice(0, 10),
+          views: r.views ?? 1,
+          team: r.team || r.tag || '',
+          status: r.status || 'draft',
+          scheduledPublishDate: r.scheduledPublishDate || null,
+          reviewer: r.reviewer || null,
+          comments: r.comments || [],
+          reporter: r.reporter || '기자 미상',
+        }));
+        setReports(withDates);
         
         // localStorage 동기화 (fallback용)
         if (!result.fromCache) {
@@ -295,31 +271,29 @@ const Dashboard = () => {
           }
           return a;
         });
+        const withDates = normalized.map((r) => ({
+          ...r,
+          date: r.date
+            ? r.date
+            : (r.createdAt || r.timestamp)
+            ? new Date(r.createdAt || r.timestamp).toISOString().slice(0, 10)
+            : new Date().toISOString().slice(0, 10),
+          views: r.views ?? 1,
+          team: r.team || r.tag || '',
+          status: r.status || 'draft',
+          scheduledPublishDate: r.scheduledPublishDate || null,
+          reviewer: r.reviewer || null,
+          comments: r.comments || [],
+          reporter: r.reporter || '기자 미상',
+        }));
         if (mutated) {
           localStorage.setItem('saved_files', JSON.stringify(normalized));
         }
-        setReports(normalized);
+        setReports(withDates);
       }
     }
     
     loadArticles();
-
-    const withDates = normalized.map((r) => ({
-      ...r,
-      date: r.date
-        ? r.date
-        : (r.createdAt || r.timestamp)
-        ? new Date(r.createdAt || r.timestamp).toISOString().slice(0, 10)
-        : new Date().toISOString().slice(0, 10),
-      views: r.views ?? 1,
-      team: r.team || r.tag || '',
-      status: r.status || 'draft', // draft, review, published, archived
-      scheduledPublishDate: r.scheduledPublishDate || null,
-      reviewer: r.reviewer || null,
-      comments: r.comments || [],
-      reporter: r.reporter || '기자 미상',
-    }));
-    setReports(withDates);
 
     const storedGames = JSON.parse(localStorage.getItem('recentGames') || '[]');
     if (storedGames.length) {

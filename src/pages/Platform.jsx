@@ -98,6 +98,7 @@ export default function Platform() {
   const [selectedTeam, setSelectedTeam] = useState('all');
   const [naverArticles, setNaverArticles] = useState([]);
   const [loadingNaver, setLoadingNaver] = useState(false);
+  const [naverArticlesFromAPI, setNaverArticlesFromAPI] = useState(false);
 
   // 날짜 헬퍼
   const today = new Date().toISOString().split('T')[0];
@@ -177,6 +178,13 @@ export default function Platform() {
             return; // 성공하면 여기서 종료
           } else {
             console.warn('⚠️ 백엔드 API 응답에 게임 데이터가 없음:', apiData);
+            if (apiData.error) {
+              console.error('   오류 상세:', apiData.error);
+            }
+            // 게임 데이터가 없으면 빈 배열로 설정
+            setScheduleData([]);
+            setUpcomingMatches([]);
+            setRecentMatches([]);
           }
         } else {
           console.warn(`⚠️ 백엔드 API 응답 실패: ${apiRes.status} ${apiRes.statusText}`);
@@ -184,101 +192,16 @@ export default function Platform() {
           if (apiRes.status === 404) {
             console.error('❌ 백엔드에 /api/kbo-schedule 엔드포인트가 없습니다. 백엔드 코드를 확인하세요.');
           }
+          // 실패하면 빈 배열로 설정
+          setScheduleData([]);
+          setUpcomingMatches([]);
+          setRecentMatches([]);
         }
       } catch (apiErr) {
         console.error('❌ 백엔드 API 호출 실패:', apiErr);
         console.error('   API 주소:', `${API_BASE}/api/kbo-schedule`);
         console.error('   오류 상세:', apiErr.message);
-      }
-      
-      // 2순위: S3에서 기존 데이터 로드 (CORS 오류 가능성 있음)
-      console.log('🔄 S3에서 데이터 로드 시도...');
-      try {
-        const res = await fetch(
-          "https://kbo-schedule-data.s3.ap-northeast-2.amazonaws.com/kbo_schedule.json",
-          {
-            mode: 'cors', // CORS 명시
-          }
-        );
-        if (!res.ok) throw new Error(`S3 응답 실패: ${res.status} ${res.statusText}`);
-        const json = await res.json();
-        const games = json.games || [];
-
-        // HTML 태그 제거, 공백 정규화
-        const stripTags = (html) => {
-          return html
-            ?.replace(/<\/?[^>]+(>|$)/g, "")      // 태그 제거
-            .replace(/vs/g, " vs ")               // vs 앞뒤 공백 추가
-            .replace(/(\d)([A-Za-z가-힣])/g, "$1 $2") // 숫자 뒤 문자 간격
-            .replace(/([가-힣A-Za-z])(\d)/g, "$1 $2") // 문자 뒤 숫자 간격
-            .replace(/\s+/g, " ")                 // 공백 정리
-            .trim();
-        };
-
-        // 날짜 문자열 "10.14(화)" → Date
-        const parseDate = (str) => {
-          if (!str) return null;
-          const m = str.match(/(\d{2})\.(\d{2})/);
-          if (!m) return null;
-          return new Date(2025, parseInt(m[1]) - 1, parseInt(m[2]));
-        };
-
-        const today = new Date();
-        const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-
-        // 데이터 정리
-        const normalized = games
-          .map((g, i) => ({
-            id: i,
-            dateText: g.date || "날짜 미정",
-            timeText: stripTags(g.time || ""),
-            playText: stripTags(g.play || ""),
-            stadium: g.stadium,
-            dateObj: parseDate(g.date),
-          }))
-          .filter((g) => g.dateObj);
-
-        // 🟢 오늘 날짜 비교용
-        const todayStr = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
-          
-        // 날짜 → YYYY-M-D 형태로 변환
-        const toKey = (d) => `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
-          
-        const normalizedWithStatus = normalized.map((g) => {
-           const isToday = g.dateObj && toKey(g.dateObj) === todayStr;
-           return {
-            ...g,
-            isToday,
-            statusTag: isToday ? "LIVE" : g.dateObj > today ? "예정" : "종료",
-          };
-        });
-
-        const upcoming = normalizedWithStatus
-          .filter((g) => g.dateObj >= todayOnly)
-          .sort((a, b) => a.dateObj - b.dateObj)
-          .slice(0, 5);
-          
-        const finished = normalizedWithStatus
-          .filter((g) => g.dateObj < todayOnly)
-          .sort((a, b) => b.dateObj - a.dateObj)
-          .slice(0, 5);
-
-        setScheduleData(normalized);
-        setUpcomingMatches(upcoming);
-        setRecentMatches(finished);
-        console.log("📅 S3에서 일정 로드 성공");
-      } catch (s3Err) {
-        console.error("❌ S3에서 일정 불러오기 실패:", s3Err);
-        console.error('   오류 타입:', s3Err.name);
-        console.error('   오류 메시지:', s3Err.message);
-        
-        // CORS 오류인 경우 명확히 표시
-        if (s3Err.message.includes('CORS') || s3Err.message.includes('blocked')) {
-          console.error('   ⚠️ CORS 오류: S3에서 직접 데이터를 가져올 수 없습니다.');
-          console.error('   💡 해결 방법: 백엔드 API를 통해 데이터를 가져오세요.');
-        }
-        
-        // 실패해도 빈 배열로 설정하여 앱이 멈추지 않도록 함
+        // 예외 발생 시 빈 배열로 설정
         setScheduleData([]);
         setUpcomingMatches([]);
         setRecentMatches([]);
@@ -342,6 +265,7 @@ export default function Platform() {
           const cacheDate = cachedData.date;
           if (cacheDate === today && cachedData.articles && cachedData.articles.length > 0) {
             setNaverArticles(cachedData.articles);
+            setNaverArticlesFromAPI(!!cachedData.fromAPI);
             return;
           }
         }
@@ -371,13 +295,19 @@ export default function Platform() {
             );
             
             setNaverArticles(articlesWithSummary);
+            setNaverArticlesFromAPI(true);
             // 캐시 저장
             localStorage.setItem(cacheKey, JSON.stringify({
               date: today,
               articles: articlesWithSummary,
+              fromAPI: true,
             }));
+          } else {
+            setNaverArticlesFromAPI(false);
+            setNaverArticles([]);
           }
         } else {
+          setNaverArticlesFromAPI(false);
           // API 실패 시 샘플 데이터 표시 (개발용)
           const sampleArticles = [
             {
@@ -422,13 +352,16 @@ export default function Platform() {
             },
           ];
           setNaverArticles(sampleArticles);
+          setNaverArticlesFromAPI(false);
           localStorage.setItem(cacheKey, JSON.stringify({
             date: today,
             articles: sampleArticles,
+            fromAPI: false,
           }));
         }
       } catch (err) {
         console.warn('네이버 기사 로드 실패:', err);
+        setNaverArticlesFromAPI(false);
         // 실패 시 샘플 데이터 표시
         const sampleArticles = [
           {
@@ -456,6 +389,10 @@ export default function Platform() {
 
     loadNaverArticles();
   }, []);
+
+  const naverSectionSubtitle = naverArticlesFromAPI
+    ? '매일 업데이트되는 최신 야구 기사'
+    : '매일 업데이트되는 최신 야구 기사 (연결 실패 시 예시)';
 
   // 기사 요약 생성 함수
   async function generateSummary(title) {
@@ -835,7 +772,7 @@ export default function Platform() {
         <div className="naver-articles-section">
           <div className="section-header">
             <h2 className="section-title">네이버 스포츠 야구 뉴스</h2>
-            <span className="section-subtitle">매일 업데이트되는 최신 야구 기사</span>
+            <span className="section-subtitle">{naverSectionSubtitle}</span>
           </div>
           <div className="naver-articles-grid">
             {naverArticles.map((article, idx) => (
